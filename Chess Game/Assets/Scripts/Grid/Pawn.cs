@@ -5,6 +5,7 @@ using System.Net;
 using System.Numerics;
 using Unity.Mathematics;
 using Unity.VisualScripting;
+using UnityEditor.ShaderGraph;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -411,6 +412,8 @@ public class Pawn : MonoBehaviour
             Team2.Add(kingInstance);
             allPieces.Add(kingInstance);
         }
+        //Menu screen can make the targeter turn a piece green for whatever reason so need this to fix it
+        RestMaterials(pawns2);
         
     }
     
@@ -2059,6 +2062,16 @@ public class Pawn : MonoBehaviour
         }
         knightInstance.layer = LayerMask.NameToLayer("Chessboard"); //for the raycast
         allPieces.Add(knightInstance);
+    }
+
+    public void RestMaterials(List<GameObject> pieceList)
+    {
+        foreach (GameObject piece in pieceList)
+        {
+            var tag = piece.CompareTag("Player1");
+            var rend = piece.GetComponent<Renderer>();
+            rend.material = tag ? team1 : team2;
+        }
     }
 
     public void GameOver(int teamID)
