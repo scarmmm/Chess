@@ -5,7 +5,6 @@ using System.Net;
 using System.Numerics;
 using Unity.Mathematics;
 using Unity.VisualScripting;
-using UnityEditor.ShaderGraph;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
