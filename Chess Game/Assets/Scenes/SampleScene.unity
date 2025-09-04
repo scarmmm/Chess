@@ -633,6 +633,14 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 184958029}
+    - targetCorrespondingSourceObject: {fileID: 3078556132249698505, guid: c4cbf7a638d1375488e98de5795ffa1f,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 184958030}
+    - targetCorrespondingSourceObject: {fileID: 3078556132249698505, guid: c4cbf7a638d1375488e98de5795ffa1f,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 184958031}
   m_SourcePrefab: {fileID: 100100000, guid: c4cbf7a638d1375488e98de5795ffa1f, type: 3}
 --- !u!1 &184958023 stripped
 GameObject:
@@ -690,8 +698,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4cea755b7ff76224d8b5e0dcbfc39e9b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GameOverScreen: {fileID: 9178050337528688677}
-  PromotionScreen: {fileID: 1862126459}
+  currentMove: {fileID: 184958031}
+  aiController: {fileID: 184958030}
+  gameOverScreen: {fileID: 0}
+  promotionScreen: {fileID: 0}
   teamStartingPositions: {fileID: 184958029}
   _playerNumber: 0
   controller: {fileID: 184958025}
@@ -833,6 +843,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a30678cad0540514b8ef035c06ca0aee, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &184958030
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 184958023}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b29fc2d4c08bd449bc391d920cdf4ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _validMoves: {fileID: 184958031}
+  _pawn: {fileID: 184958026}
+--- !u!114 &184958031
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 184958023}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b6f81072c825eb42bf9454bcc8129dc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &199569094
@@ -4330,6 +4366,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   state: 0
+  gameMode: 0
 --- !u!4 &1997161856
 Transform:
   m_ObjectHideFlags: 0

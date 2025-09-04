@@ -9,14 +9,17 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using static GameManager;
 using Quaternion = UnityEngine.Quaternion;
 using Vector3 = UnityEngine.Vector3;
 
 public class Pawn : MonoBehaviour
 {
-    public GameOver GameOverScreen;
-    public UI_Promotion PromotionScreen;
+    public AllValidMoves currentMove;
+    public AI aiController; 
+    public GameOver gameOverScreen;
+    public UI_Promotion promotionScreen;
     [SerializeField] private GridLocations teamStartingPositions; 
     [SerializeField] private int _playerNumber; // Player number for the pawn
     [SerializeField] public CharacterController controller; // Reference to the CharacterController component
@@ -424,7 +427,7 @@ public class Pawn : MonoBehaviour
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex - 1);
         }
         SetPosition();
-
+        
     }
     
     private void SetPosition()
@@ -457,7 +460,7 @@ public class Pawn : MonoBehaviour
         }
 
         // this if statement is to select the piece 
-        if (selectedPawn == null) // we currently don't have a piece selected
+        if (!selectedPawn) // we currently don't have a piece selected
         {
             switch (GameManager.Instance.state)
             {
@@ -468,9 +471,19 @@ public class Pawn : MonoBehaviour
                     PlayerTurn(hit, gridPosition, "Player1"); // we send the hit when mouse0 is clicked and required piece tag
                     return;
                 case GameStates.PlayerTurn2:
-                    EnableTargeter(Team2);
-                    DisableTargeter(Team1);
-                    PlayerTurn(hit, gridPosition, "Player2");
+                    switch (GameManager.Instance.gameMode)
+                    {
+                        case GameManager.GameMode.LocalMultiPlayer:
+                            EnableTargeter(Team2);
+                            DisableTargeter(Team1);
+                            PlayerTurn(hit, gridPosition, "Player2");
+                            break;
+                        case GameManager.GameMode.AI:
+                            //StartCoroutine(HandleAIMove());
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -555,7 +568,7 @@ public class Pawn : MonoBehaviour
             {
                 
                 //check if the piece is able to castle
-                if (canCastle == false)
+                if (!canCastle)
                 {
                     selectedPawn.transform.position = _grid.GetCellCenterWorld(gridPosition);
                     AdjustPieceHeight(selectedPawn);
@@ -586,9 +599,33 @@ public class Pawn : MonoBehaviour
             _referenceGameObject = null;
             canCastle = false;
             kingCheckComponent.isInCheck = false;
+/*
             isMovingPiece = false; 
+*/
         }
     }
+
+    public IEnumerator HandleAIMove()
+    {
+        yield return new WaitForSeconds(1f);
+        var list = GetActivePieces();
+        List<Vector3Int> allPossibleMoves  = new List<Vector3Int>();
+        GameObject randomPiece = null;
+        //we need to ensure that the chosen piece has at least 1 valid move 
+        while (allPossibleMoves.Count <= 0)
+        {
+            //get a random piece to generate a move
+            randomPiece = aiController.ReturnRandomPiece(list);
+            //get all possible moves
+            allPossibleMoves = currentMove.GetCandidates(randomPiece, GetGridPosition(randomPiece));
+        }
+        //get a random move
+        aiController.GetRandomMove(randomPiece, GetGridPosition(randomPiece),allPossibleMoves);
+        AdjustPieceHeight(randomPiece);
+        audioSource.Play();
+        GameManager.Instance.UpdateGameState(GameStates.PlayerTurn1);
+    }
+
     private void PlayerTurn(RaycastHit hit, Vector3Int gridPosition, string player)
     {
         PieceIdentity piece = hit.collider.gameObject.GetComponent<PieceIdentity>();
@@ -607,8 +644,6 @@ public class Pawn : MonoBehaviour
             var teamPieces = GameManager.Instance.state == GameStates.PlayerTurn1 ? Team1 : Team2; 
             kingGameObject = teamKing[0];
             Vector3Int kingPosition = GetGridPosition(kingGameObject);
-            //below is returning false. Why?
-            //Debug.Log("Will this move place us in check: " + WillMovePlaceOurKingInCheck(pieceGameObject, ourList, gridPosition,kingPosition));
             
             //we are not in check and our move will not place our king in check
             if (piece != null && piece.pieceType.ToString().Contains(player))
@@ -621,20 +656,13 @@ public class Pawn : MonoBehaviour
             
             else
             {
-                //Debug.Log("Invalid selection: Not your piece.");
                 return;
             }
         }
-
-        /*if (selectedPawn != null)
-        {
-            Debug.Log("peice position: " + GetGridPosition(selectedPawn));
-        }*/
-
         _validPiece = true; //ensure that we have selected a piece
     }
 
-    private bool IsValidPosition(GameObject currentPiece, Vector3Int currentPosition, Vector3Int destinationPosition,
+    public bool IsValidPosition(GameObject currentPiece, Vector3Int currentPosition, Vector3Int destinationPosition,
         bool isThisMovingThePiece)
     {
         var isValid = false;
@@ -732,10 +760,6 @@ public class Pawn : MonoBehaviour
 
                         break;
                     }
-                    /*else if (Mathf.Abs(destinationPosition.x - selectedPawnGridPos.x) == 1 && destinationPosition.y == selectedPawnGridPos.y && !isBlocked)
-                {
-                    return true;
-                }*/
                     default:
                         return false;
                 }
@@ -815,6 +839,11 @@ public class Pawn : MonoBehaviour
                     return false;
                 }
                 if (destinationPosition.x is < -6 or > 1)
+                {
+                    return false;
+                }
+
+                if (isBlocked)
                 {
                     return false;
                 }
@@ -929,7 +958,7 @@ public class Pawn : MonoBehaviour
         return false;
     }
 
-    Vector3Int GetGridPosition(GameObject pawn)
+    public Vector3Int GetGridPosition(GameObject pawn)
     {
         var gridPosition = _grid.WorldToCell(pawn.transform.position);
         return gridPosition;
@@ -940,80 +969,87 @@ public class Pawn : MonoBehaviour
     {
         //the following code checks to see if friendly piece is occupying the destination location and prevent a pawn from capturing forward
         PieceIdentity pieceIdentity = piece.GetComponent<PieceIdentity>();
-        //check if a friendly piece is blocking the move
-        if (pieceIdentity.pieceType is ChessPieceType.Player1Pawn or ChessPieceType.Player1Bishop or ChessPieceType.Player1King or 
-            ChessPieceType.Player1Knight or ChessPieceType.Player1Bishop or ChessPieceType.Player1Rook or ChessPieceType.Player1Queen)
+        switch (pieceIdentity.pieceType)
         {
-            //Debug.Log("hit position: " + destination);
-            foreach (var t in Team1)
+            //check if a friendly piece is blocking the move
+            case ChessPieceType.Player1Pawn or ChessPieceType.Player1Bishop or ChessPieceType.Player1King or 
+                ChessPieceType.Player1Knight  or ChessPieceType.Player1Rook or ChessPieceType.Player1Queen:
             {
-                //get piece position
-                var pieceGridLocation = GetGridPosition(t);
-                //assign piece
-                var pieceGo = t;
-                if (Mathf.Approximately(pieceGridLocation.x, destination.x) && Mathf.Approximately(pieceGridLocation.y, destination.y) && pieceGo.activeInHierarchy)
+                //Debug.Log("hit position: " + destination);
+                foreach (var t in Team1)
                 {
-                    //Debug.Log("Piece is blocked");
-                    return true;
-                }
-            }
-            //the following code prevents a forward capture from a pawn
-            if (pieceIdentity.pieceType == ChessPieceType.Player1Pawn)
-            {
-                var currentPos = GetGridPosition(piece);
-                var isStraightMove = (Mathf.Approximately(destination.y, currentPos.y)) &&
-                                      (Mathf.Approximately(destination.x, currentPos.x + 1) || Mathf.Approximately(destination.x, currentPos.x - 1));
-                if (isStraightMove)
-                {
-                    // Loop through enemy pieces to see if one is occupying the destination.
-                    foreach (var enemy in Team2)
+                    //get piece position
+                    var pieceGridLocation = GetGridPosition(t);
+                    //assign piece
+                    var pieceGo = t;
+                    //Debug.Log("Piece Position : " + pieceGridLocation + ", Piece ID:  " + pieceGo);
+                    if (Mathf.Approximately(pieceGridLocation.x, destination.x) && Mathf.Approximately(pieceGridLocation.y, destination.y) && pieceGo.activeInHierarchy)
                     {
-                        var enemyPos = GetGridPosition(enemy);
-                        if (Mathf.Approximately(enemyPos.x, destination.x) && Mathf.Approximately(enemyPos.y, destination.y) && enemy.activeInHierarchy)
-                        {
-                            //Debug.Log("forward capture is not allowed");
-                            return true;
-                        }
+                        //Debug.Log("Piece is blocked");
+                        return true;
                     }
                 }
-            }
-
-        }
-        if (pieceIdentity.pieceType is ChessPieceType.Player2Pawn or ChessPieceType.Player2Bishop or ChessPieceType.Player2King or ChessPieceType.Player2Knight 
-            or ChessPieceType.Player2Bishop or ChessPieceType.Player2Rook)
-        {
-            for (int i = 0; i < Team2.Count; i++)
-            {
-                //check if our team pieces are already occupied
-                var pieceGridLocation = GetGridPosition(Team2[i]);
-                var pieceGo = Team2[i];    
-
-                if (Mathf.Approximately(pieceGridLocation.x, destination.x) && Mathf.Approximately(pieceGridLocation.y, destination.y) && pieceGo.activeInHierarchy)
-                {
-                     Debug.Log("Piece is blocked");
-                    return true;
-                }
-            }
-            //make sure that we are not capturing a forward facing piece
-            if (pieceIdentity.pieceType == ChessPieceType.Player2Pawn )
-            {
                 //the following code prevents a forward capture from a pawn
-                var currentPos = GetGridPosition(piece);
-                var isStraightMove = (Mathf.Approximately(destination.y, currentPos.y)) &&
-                                     (Mathf.Approximately(destination.x, currentPos.x + 1) || Mathf.Approximately(destination.x, currentPos.x - 1));
-                if (isStraightMove)
+                if (pieceIdentity.pieceType == ChessPieceType.Player1Pawn)
                 {
-                    // Loop through enemy pieces to see if one is occupying the destination.
-                    foreach (var enemy in Team1)
+                    var currentPos = GetGridPosition(piece);
+                    var isStraightMove = (Mathf.Approximately(destination.y, currentPos.y)) &&
+                                         (Mathf.Approximately(destination.x, currentPos.x + 1) || Mathf.Approximately(destination.x, currentPos.x - 1));
+                    if (isStraightMove)
                     {
-                        var enemyPos = GetGridPosition(enemy);
-                        if (Mathf.Approximately(enemyPos.x, destination.x) && Mathf.Approximately(enemyPos.y, destination.y) && enemy.activeInHierarchy)
+                        // Loop through enemy pieces to see if one is occupying the destination.
+                        foreach (var enemy in Team2)
                         {
-                            Debug.Log("forward capture is not allowed");
-                            return true;
+                            var enemyPos = GetGridPosition(enemy);
+                            if (Mathf.Approximately(enemyPos.x, destination.x) && Mathf.Approximately(enemyPos.y, destination.y) && enemy.activeInHierarchy)
+                            {
+                                //Debug.Log("forward capture is not allowed");
+                                return true;
+                            }
                         }
                     }
                 }
+
+                break;
+            }
+            case ChessPieceType.Player2Pawn or ChessPieceType.Player2Bishop or ChessPieceType.Player2King or ChessPieceType.Player2Knight 
+                or ChessPieceType.Player2Rook:
+            {
+                for (int i = 0; i < Team2.Count; i++)
+                {
+                    //check if our team pieces are already occupied
+                    var pieceGridLocation = GetGridPosition(Team2[i]);
+                    var pieceGo = Team2[i];    
+
+                    if (Mathf.Approximately(pieceGridLocation.x, destination.x) && Mathf.Approximately(pieceGridLocation.y, destination.y) && pieceGo.activeInHierarchy)
+                    {
+                        Debug.Log("Piece is blocked");
+                        return true;
+                    }
+                }
+                //make sure that we are not capturing a forward facing piece
+                if (pieceIdentity.pieceType == ChessPieceType.Player2Pawn )
+                {
+                    //the following code prevents a forward capture from a pawn
+                    var currentPos = GetGridPosition(piece);
+                    var isStraightMove = (Mathf.Approximately(destination.y, currentPos.y)) &&
+                                         (Mathf.Approximately(destination.x, currentPos.x + 1) || Mathf.Approximately(destination.x, currentPos.x - 1));
+                    if (isStraightMove)
+                    {
+                        // Loop through enemy pieces to see if one is occupying the destination.
+                        foreach (var enemy in Team1)
+                        {
+                            var enemyPos = GetGridPosition(enemy);
+                            if (Mathf.Approximately(enemyPos.x, destination.x) && Mathf.Approximately(enemyPos.y, destination.y) && enemy.activeInHierarchy)
+                            {
+                                Debug.Log("forward capture is not allowed");
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+                break;
             }
         }
 
@@ -1067,6 +1103,7 @@ public class Pawn : MonoBehaviour
                 new Vector3Int(1, 1, 0),   // top-right
                 new Vector3Int(1, -1, 0)   // bottom-right
             };
+            //this is bad 
             for (var index = 0; index < Team1.Count; index++)
             {
                 for (int j =0; j<diagonalDirections.Length; j++)
@@ -1088,7 +1125,6 @@ public class Pawn : MonoBehaviour
                     }
                 } 
             }
-            return false;
         }
         
         return false;
@@ -1813,7 +1849,7 @@ public class Pawn : MonoBehaviour
         UI_Promotion.PromotedPiece selectedPiece = UI_Promotion.PromotedPiece.None;
         bool isDone = false;
 
-        PromotionScreen.Setup((piece) => {
+        promotionScreen.Setup((piece) => {
             selectedPiece = piece;
             isDone = true;
             Debug.Log("Completed");
@@ -1837,23 +1873,7 @@ public class Pawn : MonoBehaviour
                 break;
         }
 
-        PromotionScreen.Clean();
-    }
-
-    // don't need now
-    private bool hasOppositeSideBeReached(GameObject currentPiece)
-    {
-        var ID = currentPiece.GetComponent<PieceIdentity>();
-        GridLocations.Team team = ID.pieceType == ChessPieceType.Player1Pawn
-            ? GridLocations.Team.Team2
-            : GridLocations.Team.Team1;
-        HashSet<Vector3Int> promotionTiles = new HashSet<Vector3Int>(teamStartingPositions.GetTeamPositions(team));
-        if (promotionTiles.Contains(GetGridPosition(currentPiece)) == true)
-        {
-            return true; 
-        }
-
-        return false; 
+        promotionScreen.Clean();
     }
 
     private void EnableTargeter(List<GameObject> teamID)
@@ -1896,6 +1916,20 @@ public class Pawn : MonoBehaviour
                 item.transform.position = new Vector3(item.transform.position.x, 0, item.transform.position.z);
                 break;
         }
+    }
+
+    public List<GameObject> GetActivePieces()
+    {
+        //var currentState = GameManager.Instance.state;
+        List<GameObject> activePieces = new List<GameObject>();
+        foreach(var item in Team2)
+        {
+            if (item.activeInHierarchy)
+            {
+                activePieces.Add(item);
+            }
+        }
+        return activePieces;
     }
 
     public void SpawnQueen(Vector3Int newPosition)
@@ -2073,9 +2107,14 @@ public class Pawn : MonoBehaviour
         }
     }
 
+    public void MoveToCenterOfGrid(Vector3Int pos, GameObject  pieceSelected)
+    {
+        pieceSelected.transform.position = _grid.GetCellCenterWorld(pos);
+    }
+
     public void GameOver(int teamID)
     {
-        GameOverScreen.Setup(teamID);
+        gameOverScreen.Setup(teamID);
     }
     
 

@@ -8,12 +8,13 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance; 
     public GameStates state;
+    public GameMode gameMode;
     public static event Action<GameStates> OnGameStateChanged;
     Pawn pawn;
     // Start is called before the first frame update
     private void Awake()
     {
-        if (Instance == null)
+        if (!Instance)
         {
             Instance = this;
         }
@@ -21,6 +22,7 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         UpdateGameState(GameStates.PlayerTurn1);
+        gameMode = MainMenu.selectedMode;
     }
     
     public void UpdateGameState(GameStates newState) 
@@ -35,7 +37,11 @@ public class GameManager : MonoBehaviour
                 Debug.Log("Player 1's turn");
                 break;
             case GameStates.PlayerTurn2:
-                Debug.Log("Player 2's turn");
+                if (gameMode == GameMode.AI)
+                {
+                    // AI takes over Player 2's turn
+                    StartCoroutine(FindObjectOfType<Pawn>().HandleAIMove());
+                }
                 break;
             case GameStates.Victory:
                 //Debug.Log("Victory");
@@ -55,6 +61,11 @@ public class GameManager : MonoBehaviour
         return state;
     }
 
+    public GameMode getGameMode()
+    {
+        return gameMode;
+    }
+
     public enum GameStates
     {
         SelectPiece,
@@ -63,5 +74,11 @@ public class GameManager : MonoBehaviour
         Victory,
         Draw,
         GameOver
+    }
+
+    public enum GameMode
+    {
+        AI, 
+        LocalMultiPlayer
     }
 }
