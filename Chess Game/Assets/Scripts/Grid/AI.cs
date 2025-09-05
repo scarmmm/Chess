@@ -20,10 +20,10 @@ public class AI : MonoBehaviour
         return piece;
     }
 
-    public void GetRandomMove(GameObject pieceSelected, Vector3Int currentPosition, List<Vector3Int> possibleMoves) 
+    public bool GetRandomMove(GameObject pieceSelected, Vector3Int currentPosition, List<Vector3Int> possibleMoves) 
     {   
         if (possibleMoves == null || possibleMoves.Count == 0)
-            return;
+            return false;
 
         var attempts = 0;
         const int maxAttempts = 50; // number doesn't really matter (yet doesn't need to be high)
@@ -33,18 +33,19 @@ public class AI : MonoBehaviour
             var index = Random.Range(0, possibleMoves.Count);
             var moveSelected = possibleMoves[index];
             var value = _pawn.IsValidPosition(pieceSelected, currentPosition, moveSelected, true);
-
+            Debug.Log("Piece that was moved" + pieceSelected);
             if (value)
             {
                 _pawn.MoveToCenterOfGrid(moveSelected, pieceSelected);
                 Debug.Log($"Valid move found: {moveSelected}");
-                return; // return once we have a valid move
+                return true; // return once we have a valid move
             }
 
             attempts++;
         }
-
+    
         Debug.LogWarning($"No valid moves found for {pieceSelected.name} after {attempts} attempts.");
+        return false;
     }
     
     

@@ -115,7 +115,7 @@ public class AllValidMoves : MonoBehaviour
     
         
     
-    //the piece can slide across the board 
+    //the piece can slide across the board
     private void AddSlidingMoves(List<Vector3Int> candidates, Vector3Int pos, Vector2Int[] directions)
     {
         foreach (var dir in directions)

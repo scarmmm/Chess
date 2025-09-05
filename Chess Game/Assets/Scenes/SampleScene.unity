@@ -700,8 +700,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   currentMove: {fileID: 184958031}
   aiController: {fileID: 184958030}
-  gameOverScreen: {fileID: 0}
-  promotionScreen: {fileID: 0}
+  gameOverScreen: {fileID: 9178050337528688677}
+  promotionScreen: {fileID: 1862126459}
   teamStartingPositions: {fileID: 184958029}
   _playerNumber: 0
   controller: {fileID: 184958025}
