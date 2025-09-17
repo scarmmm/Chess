@@ -30,14 +30,20 @@ public class MainMenu : MonoBehaviour
         SceneManager.LoadScene("Scenes/SampleScene");
     }
 
-    public void StartVsAI()
+    public void StartVsEasyAI()
     {
-        selectedMode = GameManager.GameMode.AI;
+        selectedMode = GameManager.GameMode.AIEasy;
         //SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
         SceneManager.LoadScene("Assets/Scenes/SampleScene.unity");
     }
 
-    
+    public void StartVsMediumAI()
+    {
+        selectedMode = GameManager.GameMode.AIMedium;
+        SceneManager.LoadScene("Assets/Scenes/SampleScene.unity");
+    }
+
+
     public void OpenDifficultyMenu()
     {
         gameModePanel.SetActive(false);

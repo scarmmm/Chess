@@ -4,15 +4,73 @@ using UnityEngine;
 
 public class EvaluateBoard : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+    private int GetPieceValue(Piece piece)
     {
-        
-    }
+        var ID = piece.Type;
+        int value = 0;
+        switch (ID)
+        {
+            case Identity.Pawn:
+                value = 1;
+                break;
+            case Identity.Rook:
+                value = 3;
+                break;
+            case Identity.Knight:
+                value = 3;
+                break;
+            case Identity.Bishop:
+                value = 3;
+                break;
+            case  Identity.Queen:
+                value = 9;
+                break;
+            case Identity.King:
+                value = 100;
+                break;
+        }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+        return value;
     }
+    
+    
+    public int GetBoardScore(Dictionary<Vector3Int, Piece> board, bool isMaximizer)
+    {
+        var score = 0;
+        if(isMaximizer)
+        {
+            //loop through and count the score for each piece
+            foreach (var piece in board)
+            {
+                switch (piece.Value.Team)
+                {
+                    case Team.White:
+                        score += GetPieceValue(piece.Value);
+                        break;
+                    case Team.Black:
+                        score -= GetPieceValue(piece.Value);
+                        break;
+                }
+            }
+        }
+        else
+        {
+            //loop through and count the score for each piece
+            foreach (var piece in board)
+            {
+                switch (piece.Value.Team)
+                {
+                    case Team.Black:
+                        score += GetPieceValue(piece.Value);
+                        break;
+                    case Team.White:
+                        score -= GetPieceValue(piece.Value);
+                        break;
+                }
+            }
+        }
+        
+        return score;
+    }
+    
 }

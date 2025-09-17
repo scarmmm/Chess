@@ -12,7 +12,7 @@ public class AllValidMoves : MonoBehaviour
     
     
     //this script will get all available moves that a given piece has
-    //the AI will call this script to get its possible moves after it chooses a piece
+    //the AI will call this script to get its possible moves after it chooses a piece (minimax needs this aswell)
    public List<Vector3Int> GetCandidates(GameObject pieceSelected, Vector3Int currentPosition)
     {
         List<Vector3Int> candidates = new List<Vector3Int>();
@@ -65,6 +65,56 @@ public class AllValidMoves : MonoBehaviour
 
         return candidates;
     }
+    // Overload for the Board State
+    public List<Vector3Int> GetCandidates(Piece piece, Vector3Int currentPosition, bool hasMoved = true)
+    {
+        List<Vector3Int> candidates = new List<Vector3Int>();
+        var type = piece.Type;
+        ChessPieceType id = ChessPieceType.Player1Pawn;
+        switch (type)
+        {
+            case Identity.King:
+                AddKingMoves(candidates, currentPosition);
+                break;
+
+            case Identity.Knight:
+                AddKnightMoves(candidates, currentPosition);
+                break;
+
+            case Identity.Pawn:
+                if (piece.Team == Team.Black)
+                    id = ChessPieceType.Player1Pawn;
+                else if (piece.Team == Team.White)
+                    id = ChessPieceType.Player2Pawn;
+                AddPawnMoves(candidates, currentPosition, id, hasMoved);
+                break;
+
+            case Identity.Queen:
+                AddSlidingMoves(candidates, currentPosition, new Vector2Int[] {
+                    new Vector2Int(1,0), new Vector2Int(-1,0), new Vector2Int(0,1), new Vector2Int(0,-1),
+                    new Vector2Int(1,1), new Vector2Int(1,-1), new Vector2Int(-1,1), new Vector2Int(-1,-1)
+                });
+                break;
+
+            case Identity.Rook:
+                AddSlidingMoves(candidates, currentPosition, new Vector2Int[] {
+                    new Vector2Int(1,0), new Vector2Int(-1,0), new Vector2Int(0,1), new Vector2Int(0,-1)
+                });
+                break;
+
+            case Identity.Bishop:
+                AddSlidingMoves(candidates, currentPosition, new Vector2Int[] {
+                    new Vector2Int(1,1), new Vector2Int(1,-1), new Vector2Int(-1,1), new Vector2Int(-1,-1)
+                });
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+
+        return candidates;
+    }
+
 
     private void AddPawnMoves(List<Vector3Int> candidates, Vector3Int currentPosition, ChessPieceType id, bool hasMoved)
     {
@@ -89,8 +139,6 @@ public class AllValidMoves : MonoBehaviour
             candidates.Add(new Vector3Int(currentPosition.x + forward, currentPosition.y + -1, 0)); 
         }
     }
-
-
     private void AddKingMoves(List<Vector3Int> candidates, Vector3Int pos)
     {
         Vector2Int[] directions = {
@@ -131,8 +179,15 @@ public class AllValidMoves : MonoBehaviour
             }
         }
     }
+    private bool IsOutOfBounds(Vector3Int destination)
+    {
+        if (destination.x is < -6 or > 1)
+            return true;
+        if(destination.y is >7 or <0)
+            return true;
+        return false; 
+    }
     
-
     private void OutOfBounds(List<Vector3Int> list, int x, int y)
     {
         if (x >= minX && x <= maxX && y >= minY && y <= maxY)

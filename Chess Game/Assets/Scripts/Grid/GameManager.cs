@@ -37,11 +37,10 @@ public class GameManager : MonoBehaviour
                 Debug.Log("Player 1's turn");
                 break;
             case GameStates.PlayerTurn2:
-                if (gameMode == GameMode.AI)
-                {
-                    // AI takes over Player 2's turn
-                    StartCoroutine(FindObjectOfType<Pawn>().HandleAIMove());
-                }
+                if (gameMode == GameMode.AIEasy)
+                    StartCoroutine(FindObjectOfType<Pawn>().HandleAIEasyMove());
+                else if (gameMode == GameMode.AIMedium)
+                    Debug.Log("We will run out minimax here");  
                 break;
             case GameStates.Victory:
                 //Debug.Log("Victory");
@@ -78,7 +77,8 @@ public class GameManager : MonoBehaviour
 
     public enum GameMode
     {
-        AI, 
+        AIEasy,
+        AIMedium,
         LocalMultiPlayer
     }
 }

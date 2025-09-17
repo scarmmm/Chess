@@ -1,18 +1,14 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class MoveRecord : MonoBehaviour
-{
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
 
-    // Update is called once per frame
-    void Update()
+struct MoveRecord
+{
+    public Vector3Int from; 
+    public Vector3Int to;
+
+    public MoveRecord(Vector3Int from, Vector3Int to)
     {
-        
+        this.from = from;
+        this.to = to;
     }
 }

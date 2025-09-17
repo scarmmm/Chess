@@ -27,7 +27,7 @@ public class AI : MonoBehaviour
 
         var attempts = 0;
         const int maxAttempts = 50; // number doesn't really matter (yet doesn't need to be high)
-    
+        
         while (attempts < maxAttempts)
         {
             var index = Random.Range(0, possibleMoves.Count);

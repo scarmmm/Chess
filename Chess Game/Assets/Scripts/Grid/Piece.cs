@@ -2,17 +2,30 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Piece : MonoBehaviour
+public enum Identity
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+    Pawn,
+    Knight,
+    Bishop,
+    Rook,
+    Queen,
+    King
+}
 
-    // Update is called once per frame
-    void Update()
+public enum Team
+{
+    Black,  
+    White
+}
+
+
+public class Piece
+{
+    public Identity Type { get; }
+    public Team Team { get; }
+    public Piece(Identity type, Team team)
     {
-        
+        Type = type;
+        Team = team;
     }
 }

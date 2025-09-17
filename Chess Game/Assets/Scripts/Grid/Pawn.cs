@@ -52,9 +52,9 @@ public class Pawn : MonoBehaviour
     private List<GameObject> queens2 = new List<GameObject>();
     [SerializeField]private List<GameObject> kings = new List<GameObject>();
     [SerializeField]private List<GameObject> kings2 = new List<GameObject>();
-    [SerializeField]private List<GameObject> allPieces = new List<GameObject>();
-    private List<GameObject> Team1 = new List<GameObject>();
-    private List<GameObject> Team2 = new List<GameObject>();
+    [SerializeField]public List<GameObject> allPieces = new List<GameObject>();
+    public List<GameObject> Team1 = new List<GameObject>();
+    public List<GameObject> Team2 = new List<GameObject>();
     private Vector3 playerVelocity;
     bool player1KingCaptured = false;
     bool player2KingCaptured = false;
@@ -478,8 +478,11 @@ public class Pawn : MonoBehaviour
                             DisableTargeter(Team1);
                             PlayerTurn(hit, gridPosition, "Player2");
                             break;
-                        case GameManager.GameMode.AI:
+                        case GameManager.GameMode.AIEasy:
                             //StartCoroutine(HandleAIMove());
+                            break;
+                        case GameManager.GameMode.AIMedium:
+                            
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -543,6 +546,7 @@ public class Pawn : MonoBehaviour
                 }
             } 
             ///////////////////////////////////////////////////////////////////////////////////////////////
+            
             var currentPieceComp = selectedPawn.GetComponent<PieceIdentity>();
             var currentKing = GameManager.Instance.state == GameStates.PlayerTurn1 ? kings[0] : kings2[0];
             var kingCheckComponent = currentKing.GetComponent<IsInCheck>();
@@ -586,6 +590,7 @@ public class Pawn : MonoBehaviour
                 {
                     lastSelectedPiece = selectedPawn;
                 }
+                Debug.Log(GetGridPosition(selectedPawn));
                 
                 selectedPawn = null; // deselect the pawn after moving
                 audioSource.clip = piecePlaced;
@@ -607,7 +612,7 @@ public class Pawn : MonoBehaviour
         }
     }
 
-    public IEnumerator HandleAIMove()
+    public IEnumerator HandleAIEasyMove()
     {
         yield return new WaitForSeconds(1f);
         var list = GetActivePieces();
@@ -673,12 +678,9 @@ public class Pawn : MonoBehaviour
         var isPathBlocked = false;
         isBlocked = IsBlocked(currentPiece, destinationPosition);
         isPathBlocked = PathIsBlocked(currentPiece, destinationPosition);
-        //Debug.Log("IspathBlocked: " + PathIsBlocked(currentPiece, destinationPosition));
-        //Debug.Log("Piece Identity: " + currentPiece );
         PieceIdentity piece = currentPiece.GetComponent<PieceIdentity>();
         switch (piece.pieceType)
         {
-            //Debug.Log("Selected Position" + gridPosition);
             case ChessPieceType.Player1Pawn:
             case ChessPieceType.Player2Pawn:
             {
@@ -695,14 +697,9 @@ public class Pawn : MonoBehaviour
                         return true;
                     }
                     
-                    if (destinationPosition.x == selectedPawnGridPos.x - 1 && destinationPosition.y == selectedPawnGridPos.y + 1)
-                    {
-                        return  true;
-                    }
-                    return false;
+                    return destinationPosition.x == selectedPawnGridPos.x - 1 && destinationPosition.y == selectedPawnGridPos.y + 1;
                 }
-
-                if (pawnComponent != null && pawnComponent.isFirstMove == true)
+                if (pawnComponent != null && pawnComponent.isFirstMove)
                 {
                     if (Mathf.Abs(destinationPosition.x - selectedPawnGridPos.x) == 2 && destinationPosition.y == selectedPawnGridPos.y && !isBlocked && isThisMovingThePiece == true)
                     {
@@ -1767,8 +1764,7 @@ public class Pawn : MonoBehaviour
         }
         return null; 
     }
-
-
+    
     //check if there is a move that can get us out of check, so we aren't forced to only move the king
     private bool WillPieceMoveGetUsOutOfCheck(GameObject hitPieceGameObject,List<GameObject> enemyPieces, Vector3Int hitPosition, Vector3Int kingPosition)
     {
