@@ -71,37 +71,60 @@ public class BoardState : MonoBehaviour
            _gridPositions[position] = Convert(pieceType);
        }
    }
-   //when we first call minimax we will pass the global board
-   private int MiniMax(Dictionary<Vector3Int, Piece> currentBoard, int depth, int h, bool isMaximizer)
+   //when we first call minimax we will pass the global board dictionary
+   private int MiniMax(Dictionary<Vector3Int, Piece> currentBoard, int depth,bool isMaximizer)
    {
-       if(depth == 0 )
-           return _evaluateBoard.GetBoardScore(currentBoard, true);
+       if(depth == 0 || CheckMate(currentBoard, isMaximizer) )
+           return _evaluateBoard.GetBoardScore(currentBoard, isMaximizer);
+       
        if (isMaximizer)
        {
-           //1: we need all potential Moves This Board Can Make
-           var list = GetAllPossibleMoveForTeam(currentBoard, true);
-           //2: see if each move is valid
-           foreach (var keyPairValue in currentBoard)
+           var maxVal = -10000;
+           foreach (var kvp in currentBoard)
            {
-               if (keyPairValue.Value.Team == Team.White)
+               if (kvp.Value.Team == Team.White)
                {
+                   //get all valid moves for current piece
+                   var list = _allValidMoves.GetCandidates(kvp.Value, kvp.Key,true);
                    foreach (var position in list)
-                   {    //can the piece reach the square? (here is where we create the new board state)
-                       if (IsValidPosition(keyPairValue.Key, position, currentBoard) && !WillMovePlaceUsInCheck(keyPairValue.Key, position, currentBoard, true))
+                   {    //can the piece reach the square? (here is where we create the new board dictionary)
+                       if (IsValidPosition(kvp.Key, position, currentBoard) && !WillMovePlaceUsInCheck(kvp.Key, position, currentBoard, true))
                        {
-                           
+                           var newBoard = new Dictionary<Vector3Int, Piece>(currentBoard);
+                           newBoard[position] = kvp.Value;
+                           newBoard.Remove(kvp.Key);
+                           var score = MiniMax(newBoard, depth - 1, false); // a value will only be returned when we reach the required depth
+                           maxVal = Math.Max(maxVal, score);
                        }
                    }
                }
            }
+           return maxVal;
        }
-
-       //for the black team
+       
        else
        {
-           
+           var minval = 10000;
+           foreach (var kvp in currentBoard)
+           {
+               if (kvp.Value.Team == Team.Black)
+               {
+                   var list = _allValidMoves.GetCandidates(kvp.Value, kvp.Key,true);
+                   foreach (var position in list)
+                   {    //can the piece reach the square? (here is where we create the new board dictionary)
+                       if (IsValidPosition(kvp.Key, position, currentBoard) && !WillMovePlaceUsInCheck(kvp.Key, position, currentBoard, false))
+                       {
+                           var newBoard = new Dictionary<Vector3Int, Piece>(currentBoard);
+                           newBoard[position] = kvp.Value;
+                           newBoard.Remove(kvp.Key);
+                           var score = MiniMax(newBoard, depth - 1, true); // a value will only be returned when we reach the required depth
+                           minval = Math.Min(minval, score);
+                       }
+                   }
+               }
+           }
+           return minval;
        }
-       return _evaluateBoard.GetBoardScore(currentBoard, false);
    }
    
    //commit move will create the board that we to continue the generation of the tree
@@ -332,11 +355,9 @@ public class BoardState : MonoBehaviour
                 }
             }
         }
-
-
         return false; 
     }
-
+    
     private List<Vector3Int> GetAllPossibleMoveForTeam(Dictionary<Vector3Int, Piece> currentBoard, bool isMaximizer)
     {
         var possibleMoves = new List<Vector3Int>();
