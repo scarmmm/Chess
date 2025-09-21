@@ -20,6 +20,7 @@ public class Pawn : MonoBehaviour
     public AI aiController; 
     public GameOver gameOverScreen;
     public UI_Promotion promotionScreen;
+    [SerializeField]public BoardState boardState;
     [SerializeField] private GridLocations teamStartingPositions; 
     [SerializeField] private int _playerNumber; // Player number for the pawn
     [SerializeField] public CharacterController controller; // Reference to the CharacterController component
@@ -429,7 +430,7 @@ public class Pawn : MonoBehaviour
         SetPosition();
         
     }
-    
+
     private void SetPosition()
     {
         //this code will actively track the mouse position and convert it to a grid position
@@ -448,17 +449,24 @@ public class Pawn : MonoBehaviour
 
         Vector3 worldMousePosition = hit.point; //get the world position of the mouse
         //below is the hitPosition
-        Vector3Int gridPosition = _grid.WorldToCell(worldMousePosition); //convert the world position to a grid position(this works)
+        Vector3Int
+            gridPosition =
+                _grid.WorldToCell(worldMousePosition); //convert the world position to a grid position(this works)
         //Debug.Log("Mouse0 Clicked");
         //Debug.Log("Hit Position" + gridPosition);
-        if (selectedPawn != null){
+        if (selectedPawn != null)
+        {
             if (gridPosition == GetGridPosition(selectedPawn))
             {
                 Debug.Log("Can't go to the same position");
                 return;
             }
         }
+        MovePiece(selectedPawn, hit, gridPosition);
+    }
 
+    void MovePiece(GameObject selectedPawn,RaycastHit hit, Vector3Int gridPosition)
+    {
         // this if statement is to select the piece 
         if (!selectedPawn) // we currently don't have a piece selected
         {
@@ -479,10 +487,8 @@ public class Pawn : MonoBehaviour
                             PlayerTurn(hit, gridPosition, "Player2");
                             break;
                         case GameManager.GameMode.AIEasy:
-                            //StartCoroutine(HandleAIMove());
                             break;
                         case GameManager.GameMode.AIMedium:
-                            
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -493,8 +499,7 @@ public class Pawn : MonoBehaviour
             }
             
         }
-        // move the selected pawn to the new position, if the position is valid
-        //processes second click
+        //processes second click (move selected piece)
         else
         {
             bool isMovingPiece = false; 
@@ -605,13 +610,9 @@ public class Pawn : MonoBehaviour
             selectedPawn = null;
             _referenceGameObject = null;
             canCastle = false;
-            kingCheckComponent.isInCheck = false;
-/*
-            isMovingPiece = false; 
-*/
+            kingCheckComponent.isInCheck = false; 
         }
     }
-
     public IEnumerator HandleAIEasyMove()
     {
         yield return new WaitForSeconds(1f);
@@ -630,6 +631,16 @@ public class Pawn : MonoBehaviour
             isThereAValidMove = aiController.GetRandomMove(randomPiece, GetGridPosition(randomPiece),allPossibleMoves);
         }
         AdjustPieceHeight(randomPiece);
+        audioSource.Play();
+        GameManager.Instance.UpdateGameState(GameStates.PlayerTurn1);
+    }
+
+    public IEnumerator HandleMediumAIMove()
+    {
+        yield return new WaitForSeconds(1f);
+        //we have to get both list and create our global board state for the script
+        boardState.UpdateBoardStateAfterHumanTurn();
+        boardState.MiniMax(boardState._gridPositions, 4, true);
         audioSource.Play();
         GameManager.Instance.UpdateGameState(GameStates.PlayerTurn1);
     }
@@ -1170,56 +1181,55 @@ public class Pawn : MonoBehaviour
         
         // this is to check if the path is valid NOT IF THERE IS A PIECE OCCUPYING THE HIT LOCATION
         
-        if (pieceIdentity.pieceType is ChessPieceType.Player1Rook or ChessPieceType.Player2Rook)
+        switch (pieceIdentity.pieceType)
         {
-            if (hit.y == currentPiecePosition.y) // determine whether we are moving vertically or horizontally 
+            case ChessPieceType.Player1Rook or ChessPieceType.Player2Rook:
             {
-                var minX = Mathf.Min(currentPiecePosition.x, hit.x);
-                var maxX = Mathf.Max(currentPiecePosition.x, hit.x);
-
-                for (int x = minX + 1; x < maxX; x++)
+                if (hit.y == currentPiecePosition.y) // determine whether we are moving vertically or horizontally 
                 {
-                    var positionToCheck = new Vector3Int(x, currentPiecePosition.y, currentPiecePosition.z);
-                    for (int i = 0; i < allPieces.Count; i++)
+                    var minX = Mathf.Min(currentPiecePosition.x, hit.x);
+                    var maxX = Mathf.Max(currentPiecePosition.x, hit.x);
+
+                    for (int x = minX + 1; x < maxX; x++)
                     {
-                        //here we check if any piece in the team list has the same location as the position we are checking
-                        //think of it like we are gradually moving to the selected piece position from the hit position 
-                        Vector3Int pieceGridLocation = GetGridPosition(allPieces[i]);
-                        if (pieceGridLocation == positionToCheck && allPieces[i].activeInHierarchy)
+                        var positionToCheck = new Vector3Int(x, currentPiecePosition.y, currentPiecePosition.z);
+                        for (int i = 0; i < allPieces.Count; i++)
                         {
-                            return true;
+                            //here we check if any piece in the team list has the same location as the position we are checking
+                            //think of it like we are gradually moving to the selected piece position from the hit position 
+                            Vector3Int pieceGridLocation = GetGridPosition(allPieces[i]);
+                            if (pieceGridLocation == positionToCheck && allPieces[i].activeInHierarchy)
+                            {
+                                return true;
+                            }
                         }
                     }
                 }
-            }
-            if (hit.x == currentPiecePosition.x)
-            {
-                var minY = Mathf.Min(currentPiecePosition.y, hit.y);
-                var maxY = Mathf.Max(currentPiecePosition.y, hit.y);
-
-                for (int y = minY + 1; y < maxY; y++)
+                if (hit.x == currentPiecePosition.x)
                 {
-                    var positionToCheck = new Vector3Int(currentPiecePosition.x, y, currentPiecePosition.z);
-                    for (int i = 0; i < allPieces.Count; i++)
+                    var minY = Mathf.Min(currentPiecePosition.y, hit.y);
+                    var maxY = Mathf.Max(currentPiecePosition.y, hit.y);
+
+                    for (int y = minY + 1; y < maxY; y++)
                     {
-                        Vector3Int pieceGridLocation = GetGridPosition(allPieces[i]);
-                        if (pieceGridLocation == positionToCheck && allPieces[i].activeInHierarchy)
+                        var positionToCheck = new Vector3Int(currentPiecePosition.x, y, currentPiecePosition.z);
+                        for (int i = 0; i < allPieces.Count; i++)
                         {
-                            return true;
+                            Vector3Int pieceGridLocation = GetGridPosition(allPieces[i]);
+                            if (pieceGridLocation == positionToCheck && allPieces[i].activeInHierarchy)
+                            {
+                                return true;
+                            }
                         }
                     }
                 }
-            }
-        }
 
-        else if (pieceIdentity.pieceType is ChessPieceType.Player1Queen or ChessPieceType.Player2Queen)
-        {
-            if (Mathf.Abs(currentPiecePosition.x - hit.x) == 1 && Mathf.Abs(currentPiecePosition.y - hit.y) == 1)
-            {
+                break;
+            }
+            case ChessPieceType.Player1Queen or ChessPieceType.Player2Queen when Mathf.Abs(currentPiecePosition.x - hit.x) == 1 && Mathf.Abs(currentPiecePosition.y - hit.y) == 1:
                 return false;
-            }
-
-            if (hit.y == currentPiecePosition.y) // we are moving horizontally  
+            // we are moving horizontally  
+            case ChessPieceType.Player1Queen or ChessPieceType.Player2Queen when hit.y == currentPiecePosition.y:
             {
                 var minX = Mathf.Min(currentPiecePosition.x, hit.x);
                 var maxX = Mathf.Max(currentPiecePosition.x, hit.x);
@@ -1237,8 +1247,11 @@ public class Pawn : MonoBehaviour
                         }
                     }
                 }
+
+                break;
             }
-            else if (hit.x == currentPiecePosition.x) //we are moving vertically
+            //we are moving vertically
+            case ChessPieceType.Player1Queen or ChessPieceType.Player2Queen when hit.x == currentPiecePosition.x:
             {
                 var minY = Mathf.Min(currentPiecePosition.y, hit.y);
                 var maxY = Mathf.Max(currentPiecePosition.y, hit.y);
@@ -1254,137 +1267,143 @@ public class Pawn : MonoBehaviour
                         }
                     }
                 }
+
+                break;
             }
-            else if (hit.x != currentPiecePosition.x && hit.y != currentPiecePosition.y) // we are moving diagonally (this logic is wrong)   
+            case ChessPieceType.Player1Queen or ChessPieceType.Player2Queen:
             {
-                if (hit.x == currentPiecePosition.x || hit.y == currentPiecePosition.y) return true;
-                var isDiagonal = false;
-                isDiagonal = Mathf.Abs(hit.x - currentPiecePosition.x) == 1 && Mathf.Abs(hit.y - currentPiecePosition.y) == 1; //adjacent move (distance of 1,1)
-                if (isDiagonal == true)
-                    return false;
-                //let's make sure that we are diagonal 
-                var hitX = hit.x;
-                var hitY = hit.y;
-                var currentX = currentPiecePosition.x;
-                var currentY = currentPiecePosition.y;
-                var valX = hitX - currentX;
-                var valY = hitY - currentY;
-                var signX = Mathf.Sign(valX);
-                var signY = Mathf.Sign(valY);
-                List<Vector3Int> positions = new List<Vector3Int>();
-                switch ((signX, signY))
+                if (hit.x != currentPiecePosition.x && hit.y != currentPiecePosition.y) // we are moving diagonally (this logic is wrong)   
                 {
-                    case (1f, 1f):
-                        for (int i = currentX + 1; i <= hitX; i++)
-                        {
-                            currentY++;
-                            if (currentY == hitY && i == hitX) //we reached the hit point and therefore are diagonal  
-                            {   
-                                isDiagonal = true;
-                            }
-                            Vector3Int vec3 = new Vector3Int(i, currentY, -1);
-                            positions.Add(vec3);
-                        }
-                        if (isDiagonal == false)
-                        {
-                            positions.Clear();
-                            return true;
-                        }
-                        if (DiagonalPathBlocked(positions, teamId,hit))
-                        {
-                            return true; 
-                        }
-
-                        break;
-                    case (1f, -1f):
-                        //this need to be fixed
-                        for (int i = currentX + 1; i <= hitX; i++)
-                        {
-                            currentY--;
-                            //Debug.Log("Current Location: " + i + " , " + currentY);
-                            //Debug.Log("Hit Position: " + hitX + " , " + hitY);
-                            if (currentY == hitY && i == hitX) //we reached the hit point and therefore are diagonal  
+                    if (hit.x == currentPiecePosition.x || hit.y == currentPiecePosition.y) return true;
+                    var isDiagonal = false;
+                    isDiagonal = Mathf.Abs(hit.x - currentPiecePosition.x) == 1 && Mathf.Abs(hit.y - currentPiecePosition.y) == 1; //adjacent move (distance of 1,1)
+                    if (isDiagonal == true)
+                        return false;
+                    //let's make sure that we are diagonal 
+                    var hitX = hit.x;
+                    var hitY = hit.y;
+                    var currentX = currentPiecePosition.x;
+                    var currentY = currentPiecePosition.y;
+                    var valX = hitX - currentX;
+                    var valY = hitY - currentY;
+                    var signX = Mathf.Sign(valX);
+                    var signY = Mathf.Sign(valY);
+                    List<Vector3Int> positions = new List<Vector3Int>();
+                    switch ((signX, signY))
+                    {
+                        case (1f, 1f):
+                            for (int i = currentX + 1; i <= hitX; i++)
                             {
-                                isDiagonal = true;
+                                currentY++;
+                                if (currentY == hitY && i == hitX) //we reached the hit point and therefore are diagonal  
+                                {   
+                                    isDiagonal = true;
+                                }
+                                Vector3Int vec3 = new Vector3Int(i, currentY, -1);
+                                positions.Add(vec3);
                             }
-                            Vector3Int vec3 = new Vector3Int(i, currentY, -1);
-                            positions.Add(vec3);
-                        }
+                            if (isDiagonal == false)
+                            {
+                                positions.Clear();
+                                return true;
+                            }
+                            if (DiagonalPathBlocked(positions, teamId,hit))
+                            {
+                                return true; 
+                            }
+
+                            break;
+                        case (1f, -1f):
+                            //this need to be fixed
+                            for (int i = currentX + 1; i <= hitX; i++)
+                            {
+                                currentY--;
+                                //Debug.Log("Current Location: " + i + " , " + currentY);
+                                //Debug.Log("Hit Position: " + hitX + " , " + hitY);
+                                if (currentY == hitY && i == hitX) //we reached the hit point and therefore are diagonal  
+                                {
+                                    isDiagonal = true;
+                                }
+                                Vector3Int vec3 = new Vector3Int(i, currentY, -1);
+                                positions.Add(vec3);
+                            }
                         
-                        if (isDiagonal == false)
-                        {
-                            positions.Clear();
-                            return true;
-                        }
-
-                        if (DiagonalPathBlocked(positions, teamId,hit))
-                        {
-                            return true; 
-                        }
-                        break;
-                    case (-1f, 1f):
-                        for (int i = currentY + 1; i <= hitY; i++)
-                        {
-                            currentX--;
-                            if (i == hitY && currentX == hitX) //we reached the hit point and therefore are diagonal  
+                            if (isDiagonal == false)
                             {
-                                isDiagonal = true;
+                                positions.Clear();
+                                return true;
                             }
-                            Vector3Int vec3 = new Vector3Int(currentX, i, -1);
-                            positions.Add(vec3);
-                        }
-                        for (var index = 0; index < positions.Count; index++)
-                        {
-                            var v = positions[index];
-                            //Debug.Log("Vector: " + v);
-                        }
-                        //Debug.Log("all vectors accounted for!");
-                        if (isDiagonal == false)
-                        {
-                            positions.Clear();
-                            return true;
-                        }
-                        //Debug.Log("diangoalpathisblocked: " + DiagonalPathBlocked(positions, teamId,hit) );
-                        if (DiagonalPathBlocked(positions, teamId,hit))
-                        {
-                            return true; 
-                        }
-                        break;
+
+                            if (DiagonalPathBlocked(positions, teamId,hit))
+                            {
+                                return true; 
+                            }
+                            break;
+                        case (-1f, 1f):
+                            for (int i = currentY + 1; i <= hitY; i++)
+                            {
+                                currentX--;
+                                if (i == hitY && currentX == hitX) //we reached the hit point and therefore are diagonal  
+                                {
+                                    isDiagonal = true;
+                                }
+                                Vector3Int vec3 = new Vector3Int(currentX, i, -1);
+                                positions.Add(vec3);
+                            }
+                            for (var index = 0; index < positions.Count; index++)
+                            {
+                                var v = positions[index];
+                                //Debug.Log("Vector: " + v);
+                            }
+                            //Debug.Log("all vectors accounted for!");
+                            if (isDiagonal == false)
+                            {
+                                positions.Clear();
+                                return true;
+                            }
+                            //Debug.Log("diangoalpathisblocked: " + DiagonalPathBlocked(positions, teamId,hit) );
+                            if (DiagonalPathBlocked(positions, teamId,hit))
+                            {
+                                return true; 
+                            }
+                            break;
                     
-                    case (-1f, -1f):
-                        for (int i = currentX - 1; i >= hitX; i--)
-                        {
-                            currentY--;
-                            /*Debug.Log("Current X: " +i);
-                            Debug.Log( "Current Y: " + currentY);*/
-                            if (currentY == hitY && i == hitX) //we reached the hit point and therefore are diagonal  
+                        case (-1f, -1f):
+                            for (int i = currentX - 1; i >= hitX; i--)
                             {
-                                isDiagonal = true;
+                                currentY--;
+                                /*Debug.Log("Current X: " +i);
+                            Debug.Log( "Current Y: " + currentY);*/
+                                if (currentY == hitY && i == hitX) //we reached the hit point and therefore are diagonal  
+                                {
+                                    isDiagonal = true;
+                                }
+                                Vector3Int vec3 = new Vector3Int(i, currentY, -1);
+                                positions.Add(vec3);;
                             }
-                            Vector3Int vec3 = new Vector3Int(i, currentY, -1);
-                            positions.Add(vec3);;
-                        }
-                        if (isDiagonal == false)
-                        {
-                            positions.Clear();
-                            return true;
-                        }
+                            if (isDiagonal == false)
+                            {
+                                positions.Clear();
+                                return true;
+                            }
 
-                        if (DiagonalPathBlocked(positions, teamId,hit) == true) 
-                        {
-                            return true; 
-                        }
-                        break;
-                    default:
-                        Debug.Log("I really messed up if we execute this");
-                        break;
+                            if (DiagonalPathBlocked(positions, teamId,hit) == true) 
+                            {
+                                return true; 
+                            }
+                            break;
+                        default:
+                            Debug.Log("I really messed up if we execute this");
+                            break;
+                    }
                 }
-            }
-        }
 
-        else if (pieceIdentity.pieceType is ChessPieceType.Player1Bishop or ChessPieceType.Player2Bishop)
-        {
-            if (hit.x == currentPiecePosition.x || hit.y == currentPiecePosition.y) return true;
+                break;
+            }
+            case ChessPieceType.Player1Bishop or ChessPieceType.Player2Bishop when hit.x == currentPiecePosition.x || hit.y == currentPiecePosition.y:
+                return true;
+            case ChessPieceType.Player1Bishop or ChessPieceType.Player2Bishop:
+            {
                 var isDiagonal = false;
                 //will check if we are only moving a distance of one to a diagonal grid, cannot be blocked
                 isDiagonal = Mathf.Abs(hit.x - currentPiecePosition.x) == 1 && Mathf.Abs(hit.y - currentPiecePosition.y) == 1; //adjacent move (distance of 1,1)
@@ -1431,7 +1450,7 @@ public class Pawn : MonoBehaviour
                     case (1f, -1f):
                         for (int i = currentX + 1; i <= hitX; i++)
                         {
-                           // Debug.Log("Did we enter correct code?");
+                            // Debug.Log("Did we enter correct code?");
                             currentY--;
                             if (currentY == hitY && i == hitX) //we reached the hit point and therefore are diagonal  
                             {
@@ -1509,6 +1528,9 @@ public class Pawn : MonoBehaviour
                         Debug.Log("I really messed up if we execute this");
                         break;
                 }
+
+                break;
+            }
         }
         
         return false;
@@ -2121,11 +2143,48 @@ public class Pawn : MonoBehaviour
     {
         pieceSelected.transform.position = _grid.GetCellCenterWorld(pos);
     }
-
     public void GameOver(int teamID)
     {
         gameOverScreen.Setup(teamID);
     }
-    
+
+    public void CreateBoardState()
+    {
+        foreach (var piece in allPieces)
+            piece.SetActive(false);
+        bool flag1 = false, flag2 = false;
+        foreach (var piece in allPieces)
+        {
+            if ((piece.GetComponent<PieceIdentity>().pieceType == ChessPieceType.Player1Pawn && !flag1) || piece.GetComponent<PieceIdentity>().pieceType == ChessPieceType.Player1King)
+            {
+                flag1 = true;
+                piece.SetActive(true);
+            }
+            else if ((piece.GetComponent<PieceIdentity>().pieceType == ChessPieceType.Player2Pawn && !flag2) || piece.GetComponent<PieceIdentity>().pieceType == ChessPieceType.Player2King)
+            {
+                flag2 = true;
+                piece.SetActive(true);
+            }
+        }
+        Vector3Int pawn1Position = new Vector3Int(-2, 4, 0);
+        Vector3Int pawn2Position = new Vector3Int(-3, 3, 0);
+        //below is where we will place the pieces
+        foreach (var piece in allPieces)
+        {
+            if (piece.GetComponent<PieceIdentity>().pieceType == ChessPieceType.Player1Pawn && piece.activeInHierarchy)
+            {
+                piece.transform.position = _grid.GetCellCenterWorld(pawn1Position);
+                AdjustPieceHeight(piece);
+            }
+            else if (piece.GetComponent<PieceIdentity>().pieceType == ChessPieceType.Player2Pawn && piece.activeInHierarchy)
+            {
+               piece.transform.position = _grid.GetCellCenterWorld(pawn2Position); 
+               AdjustPieceHeight(piece);
+            }
+        }   
+        
+        Instance.state = GameStates.PlayerTurn2;
+    }
+
 
 }

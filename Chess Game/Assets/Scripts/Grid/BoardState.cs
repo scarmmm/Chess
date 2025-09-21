@@ -7,7 +7,7 @@ using UnityEngine;
 
 public class BoardState : MonoBehaviour
 {
-   private Dictionary<Vector3Int, Piece> _gridPositions = new Dictionary<Vector3Int, Piece>();
+   public Dictionary<Vector3Int, Piece> _gridPositions = new Dictionary<Vector3Int, Piece>();
    private Pawn _pawnInstance;
    private ChessPieceType _pieceSelected;
    private AllValidMoves _allValidMoves;
@@ -51,13 +51,14 @@ public class BoardState : MonoBehaviour
    }
    
    //after the human makes a turn the AI needs to get the current state of the board
-   private void UpdateBoardStateAfterHumanTurn()
+   public void UpdateBoardStateAfterHumanTurn()
    {
        _gridPositions.Clear();
        AddPiecesToBoard(_pawnInstance.Team1, Team.White);
        AddPiecesToBoard(_pawnInstance.Team2, Team.Black);
    }
 
+   //only add active pieces to board
    private void AddPiecesToBoard(IEnumerable<GameObject> pieces, Team team)
    {
        foreach (var pieceGO in pieces)
@@ -72,7 +73,7 @@ public class BoardState : MonoBehaviour
        }
    }
    //when we first call minimax we will pass the global board dictionary
-   private int MiniMax(Dictionary<Vector3Int, Piece> currentBoard, int depth,bool isMaximizer)
+   public int MiniMax(Dictionary<Vector3Int, Piece> currentBoard, int depth,bool isMaximizer)
    {
        if(depth == 0 || CheckMate(currentBoard, isMaximizer) )
            return _evaluateBoard.GetBoardScore(currentBoard, isMaximizer);

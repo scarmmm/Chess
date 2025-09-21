@@ -8,7 +8,7 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance; 
     public GameStates state;
-    public GameMode gameMode;
+    public GameMode gameMode = GameMode.AIEasy;
     public static event Action<GameStates> OnGameStateChanged;
     Pawn pawn;
     // Start is called before the first frame update
@@ -38,7 +38,10 @@ public class GameManager : MonoBehaviour
                 break;
             case GameStates.PlayerTurn2:
                 if (gameMode == GameMode.AIEasy)
+                {
+                    Debug.Log("Started AI easy code");
                     StartCoroutine(FindObjectOfType<Pawn>().HandleAIEasyMove());
+                }
                 else if (gameMode == GameMode.AIMedium)
                     Debug.Log("We will run out minimax here");  
                 break;
