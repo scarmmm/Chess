@@ -14,10 +14,7 @@ public class Overlap : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("ChessBoard"))
-        {
-           // Debug.Log("Chessboard");    
             return;
-        }
        
         if (pawn == null || pawn.lastSelectedPiece == null)
         {
@@ -43,6 +40,7 @@ public class Overlap : MonoBehaviour
         {
             //other.gameObject.tag = pawn.eliminatedPlayer;
             //Destroy(other.gameObject, 0.1f);
+            Debug.Log("Did collide with an enemy piece");
             other.gameObject.SetActive(false);
             // Move the selected piece to the position of the destroyed piece
             Vector3 otherPiecePos = other.gameObject.transform.position;

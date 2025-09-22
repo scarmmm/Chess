@@ -28,4 +28,11 @@ public class Piece
         Type = type;
         Team = team;
     }
+
+    //for a deep copy (will need later)
+    public Piece Clone()
+    {
+        return new Piece(this.Type, this.Team);
+    }
+
 }

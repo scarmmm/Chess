@@ -14,11 +14,7 @@ public class EvaluateBoard : MonoBehaviour
                 value = 1;
                 break;
             case Identity.Rook:
-                value = 3;
-                break;
             case Identity.Knight:
-                value = 3;
-                break;
             case Identity.Bishop:
                 value = 3;
                 break;
@@ -31,7 +27,7 @@ public class EvaluateBoard : MonoBehaviour
         }
 
         return value;
-    }
+    } 
     
     
     public int GetBoardScore(Dictionary<Vector3Int, Piece> board, bool isMaximizer)

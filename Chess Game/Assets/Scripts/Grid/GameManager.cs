@@ -8,9 +8,10 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance; 
     public GameStates state;
-    public GameMode gameMode = GameMode.AIEasy;
+    public GameMode gameMode;
     public static event Action<GameStates> OnGameStateChanged;
-    Pawn pawn;
+
+    private Pawn _pawn;
     // Start is called before the first frame update
     private void Awake()
     {
@@ -58,12 +59,12 @@ public class GameManager : MonoBehaviour
         OnGameStateChanged?.Invoke(state);
     }
 
-    public GameStates getCurrentGameState()
+    public GameStates GetCurrentGameState()
     {
         return state;
     }
 
-    public GameMode getGameMode()
+    public GameMode GetGameMode()
     {
         return gameMode;
     }
@@ -75,7 +76,6 @@ public class GameManager : MonoBehaviour
         PlayerTurn2,
         Victory,
         Draw,
-        GameOver
     }
 
     public enum GameMode

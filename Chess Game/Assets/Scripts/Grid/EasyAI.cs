@@ -9,7 +9,7 @@ public class AI : MonoBehaviour
     public AllValidMoves _validMoves; 
     public Pawn _pawn;
     
-    public GameObject ReturnRandomPiece(List<GameObject> pieces)
+    public static GameObject ReturnRandomPiece(List<GameObject> pieces)
     {
         if (pieces.Count == 0)
             return  null;
@@ -33,11 +33,11 @@ public class AI : MonoBehaviour
             var index = Random.Range(0, possibleMoves.Count);
             var moveSelected = possibleMoves[index];
             var value = _pawn.IsValidPosition(pieceSelected, currentPosition, moveSelected, true);
-            Debug.Log("Piece that was moved" + pieceSelected);
+            //Debug.Log("Piece that was moved" + pieceSelected);
             if (value)
             {
                 _pawn.MoveToCenterOfGrid(moveSelected, pieceSelected);
-                Debug.Log($"Valid move found: {moveSelected}");
+                //Debug.Log($"Valid move found: {moveSelected}");
                 return true; // return once we have a valid move
             }
 

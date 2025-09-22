@@ -67,7 +67,6 @@ public class BoardState : MonoBehaviour
                continue;
 
            var position = _pawnInstance.GetGridPosition(pieceGO);
-           
            var pieceType = pieceGO.GetComponent<PieceIdentity>().pieceType; // returns Identity enum
            _gridPositions[position] = Convert(pieceType);
        }
@@ -75,12 +74,13 @@ public class BoardState : MonoBehaviour
    //when we first call minimax we will pass the global board dictionary
    public int MiniMax(Dictionary<Vector3Int, Piece> currentBoard, int depth,bool isMaximizer)
    {
-       if(depth == 0 || CheckMate(currentBoard, isMaximizer) )
-           return _evaluateBoard.GetBoardScore(currentBoard, isMaximizer);
+       if(depth == 0 || CheckMate(currentBoard, true) )
+           return _evaluateBoard.GetBoardScore(currentBoard, true);
        
        if (isMaximizer)
        {
            var maxVal = -10000;
+           //check each piece in the board
            foreach (var kvp in currentBoard)
            {
                if (kvp.Value.Team == Team.White)
@@ -91,9 +91,13 @@ public class BoardState : MonoBehaviour
                    {    //can the piece reach the square? (here is where we create the new board dictionary)
                        if (IsValidPosition(kvp.Key, position, currentBoard) && !WillMovePlaceUsInCheck(kvp.Key, position, currentBoard, true))
                        {
-                           var newBoard = new Dictionary<Vector3Int, Piece>(currentBoard);
-                           newBoard[position] = kvp.Value;
+                           var newBoard = new Dictionary<Vector3Int, Piece>();
+                           //deep copy (if for the valid move)
+                           foreach (var kvp1 in currentBoard) 
+                               newBoard[kvp1.Key] = kvp1.Value.Clone();
+                           var movedPiece = kvp.Value.Clone();
                            newBoard.Remove(kvp.Key);
+                           newBoard[position] = movedPiece;
                            var score = MiniMax(newBoard, depth - 1, false); // a value will only be returned when we reach the required depth
                            maxVal = Math.Max(maxVal, score);
                        }
@@ -102,10 +106,9 @@ public class BoardState : MonoBehaviour
            }
            return maxVal;
        }
-       
        else
        {
-           var minval = 10000;
+           var minVal = 10000;
            foreach (var kvp in currentBoard)
            {
                if (kvp.Value.Team == Team.Black)
@@ -119,12 +122,12 @@ public class BoardState : MonoBehaviour
                            newBoard[position] = kvp.Value;
                            newBoard.Remove(kvp.Key);
                            var score = MiniMax(newBoard, depth - 1, true); // a value will only be returned when we reach the required depth
-                           minval = Math.Min(minval, score);
+                           minVal = Math.Min(minVal, score);
                        }
                    }
                }
            }
-           return minval;
+           return minVal;
        }
    }
    
@@ -211,8 +214,7 @@ public class BoardState : MonoBehaviour
         //will let us know what direction we have to iterate towards
         var dx = Math.Sign(destination.x - currentPosition.x);
         var dy = Math.Sign(destination.y - currentPosition.y);
-    
-        var piece = currentBoard[currentPosition];
+
         // move one square at a time until just before the destination
         var x = currentPosition.x + dx;
         var y = currentPosition.y + dy;

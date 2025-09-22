@@ -60,7 +60,7 @@ public class AllValidMoves : MonoBehaviour
         }
         foreach (var c in candidates)
         {
-            Debug.Log($"Candidate: {c}");
+            //Debug.Log($"Candidate: {c}");
         }
 
         return candidates;
@@ -118,27 +118,29 @@ public class AllValidMoves : MonoBehaviour
 
     private void AddPawnMoves(List<Vector3Int> candidates, Vector3Int currentPosition, ChessPieceType id, bool hasMoved)
     {
-        
         var forward = (id == ChessPieceType.Player1Pawn) ? -1 : 1;
-        //single move
-        candidates.Add(new Vector3Int(currentPosition.x + forward, currentPosition.y, 0));
 
-        // Forward two steps (only if not moved)
-        if (!hasMoved)
-            candidates.Add(new Vector3Int(currentPosition.x + 2 * forward, currentPosition.y, 0));
+        // Single step forward
+        var oneStep = new Vector3Int(currentPosition.x + forward, currentPosition.y, 0);
+        if (IsInsideBoard(oneStep))
+            candidates.Add(oneStep);
+
+        // Double step forward (only if not moved)
+        var twoStep = new Vector3Int(currentPosition.x + 2 * forward, currentPosition.y, 0);
+        if (!hasMoved && IsInsideBoard(twoStep))
+            candidates.Add(twoStep);
 
         // Capture diagonals
-        if (id == ChessPieceType.Player1Pawn)
-        { //forward = -1
-            candidates.Add(new Vector3Int(currentPosition.x + forward, currentPosition.y + 1, 0));
-            candidates.Add(new Vector3Int(currentPosition.x + forward, currentPosition.y + -1, 0));
-        }
-        else
-        { //forward = 1
-            candidates.Add(new Vector3Int(currentPosition.x + forward, currentPosition.y + 1, 0));
-            candidates.Add(new Vector3Int(currentPosition.x + forward, currentPosition.y + -1, 0)); 
-        }
+        var diagLeft  = new Vector3Int(currentPosition.x + forward, currentPosition.y - 1, 0);
+        var diagRight = new Vector3Int(currentPosition.x + forward, currentPosition.y + 1, 0);
+
+        if (IsInsideBoard(diagLeft))
+            candidates.Add(diagLeft);
+
+        if (IsInsideBoard(diagRight))
+            candidates.Add(diagRight);
     }
+
     private void AddKingMoves(List<Vector3Int> candidates, Vector3Int pos)
     {
         Vector2Int[] directions = {
@@ -204,4 +206,10 @@ public class AllValidMoves : MonoBehaviour
         }
         return false;
     }
+    private bool IsInsideBoard(Vector3Int pos)
+    {
+        return pos.x >= -6 && pos.x <= 1 &&
+               pos.y >= 0 && pos.y <= 7;
+    }
+
 }
