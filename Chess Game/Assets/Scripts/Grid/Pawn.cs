@@ -626,7 +626,7 @@ public class Pawn : MonoBehaviour
         yield return new WaitForSeconds(1f);
         //we have to get both list and create our global board state for the script
         boardState.UpdateBoardStateAfterHumanTurn();
-        boardState.MiniMax(boardState._gridPositions, 4, true);
+        boardState.MiniMax(boardState._gridPositions, 4, true, false);
         audioSource.Play();
         GameManager.Instance.UpdateGameState(GameStates.PlayerTurn1);
     }
@@ -873,9 +873,7 @@ public class Pawn : MonoBehaviour
 
                 //the following code will handle the logic if the king is in check (moves and end condition)
                 if (weAreInCheck2 && selectedPawn == currentPiece)
-                {
-                    //Debug.Log("did wenter ?");
-                    //lets create a check for whether there is a valid move remaining and then we should be done with the chess game
+                { //lets create a check for whether there is a valid move remaining and then we should be done with the chess game
                     List<Vector3Int> allValidPositions = new List<Vector3Int>();
                     var currentPositionofKing = GetGridPosition(currentPiece);
                     allValidPositions= GetAllValidPositionsforKing(allValidPositions, currentPositionofKing);
@@ -898,17 +896,9 @@ public class Pawn : MonoBehaviour
                 float deltaX = Mathf.Abs(destinationPosition.x - currentPosition.x);
                 float deltaY = Mathf.Abs(destinationPosition.y - currentPosition.y);
                 if (Mathf.Approximately(Mathf.Max(deltaX, deltaY), 1) && !isBlocked)
-                {
-                    //Debug.Log("did wenter 2 ?");
                     return true;
-                }
-
                 if (isBlocked)
-                {
-                    //Debug.Log("did wenter 3 ?");
                     return false;
-                }
-
                 break;
             }
             default:

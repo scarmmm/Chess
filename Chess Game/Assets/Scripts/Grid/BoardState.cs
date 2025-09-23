@@ -13,6 +13,9 @@ public class BoardState : MonoBehaviour
    private AllValidMoves _allValidMoves;
    private bool _isMaximizer;
    private EvaluateBoard _evaluateBoard;
+   private Vector3Int _from;
+   private Vector3Int _to;
+   private Piece _piece;
    private void Start()
    {
        SetGridPositions();
@@ -72,7 +75,7 @@ public class BoardState : MonoBehaviour
        }
    }
    //when we first call minimax we will pass the global board dictionary
-   public int MiniMax(Dictionary<Vector3Int, Piece> currentBoard, int depth,bool isMaximizer)
+   public int MiniMax(Dictionary<Vector3Int, Piece> currentBoard, int depth, bool isMaximizer, bool storeMove)
    {
        if(depth == 0 || CheckMate(currentBoard, true) )
            return _evaluateBoard.GetBoardScore(currentBoard, true);
@@ -98,8 +101,18 @@ public class BoardState : MonoBehaviour
                            var movedPiece = kvp.Value.Clone();
                            newBoard.Remove(kvp.Key);
                            newBoard[position] = movedPiece;
-                           var score = MiniMax(newBoard, depth - 1, false); // a value will only be returned when we reach the required depth
-                           maxVal = Math.Max(maxVal, score);
+                           var score = MiniMax(newBoard, depth - 1, false, false); // a value will only be returned when we reach the required depth
+                           if (score > maxVal)
+                           {
+                               maxVal = score;
+                               //here we store the move that was taken 
+                               if (storeMove)
+                               {
+                                   _from = kvp.Key;
+                                   _to = position;
+                                   _piece = kvp.Value;
+                               }
+                           }
                        }
                    }
                }
@@ -118,10 +131,14 @@ public class BoardState : MonoBehaviour
                    {    //can the piece reach the square? (here is where we create the new board dictionary)
                        if (IsValidPosition(kvp.Key, position, currentBoard) && !WillMovePlaceUsInCheck(kvp.Key, position, currentBoard, false))
                        {
-                           var newBoard = new Dictionary<Vector3Int, Piece>(currentBoard);
-                           newBoard[position] = kvp.Value;
+                           var newBoard = new Dictionary<Vector3Int, Piece>();
+                           //deep copy (if for the valid move)
+                           foreach (var kvp1 in currentBoard) 
+                               newBoard[kvp1.Key] = kvp1.Value.Clone();
+                           var movedPiece = kvp.Value.Clone();
                            newBoard.Remove(kvp.Key);
-                           var score = MiniMax(newBoard, depth - 1, true); // a value will only be returned when we reach the required depth
+                           newBoard[position] = movedPiece;
+                           var score = MiniMax(newBoard, depth - 1, true, false); // a value will only be returned when we reach the required depth
                            minVal = Math.Min(minVal, score);
                        }
                    }

@@ -32,7 +32,7 @@ public class Piece
     //for a deep copy (will need later)
     public Piece Clone()
     {
-        return new Piece(this.Type, this.Team);
+        return new Piece(Type, Team);
     }
 
 }
