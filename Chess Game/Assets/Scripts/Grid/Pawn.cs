@@ -530,13 +530,10 @@ public class Pawn : MonoBehaviour
                 return;
             }
             
-            //Debug.Log("are we in check: " + InCheck(kingGameObject,enemyList));
             if (InCheck(kingGameObject,enemyList))
             {
-                Debug.Log("We are in check");
                 if (WillPieceMoveGetUsOutOfCheck(selectedPawn, enemyList, gridPosition, kingPosition))
                     Debug.Log("We are in check but got out");
-                //if the piece move does not get us out of check then we need to move the king
                 else
                 {
                     Debug.Log("we have to use our king");
@@ -626,7 +623,7 @@ public class Pawn : MonoBehaviour
         yield return new WaitForSeconds(1f);
         //we have to get both list and create our global board state for the script
         boardState.UpdateBoardStateAfterHumanTurn();
-        boardState.MiniMax(boardState._gridPositions, 4, true, false);
+        boardState.MiniMax(boardState.GridPositions, 4, true, false);
         audioSource.Play();
         GameManager.Instance.UpdateGameState(GameStates.PlayerTurn1);
     }
@@ -1582,10 +1579,10 @@ public class Pawn : MonoBehaviour
         
         for (var index = 0; index < enemyPieces.Count; index++)
         {
+            if(!enemyPieces[index].activeInHierarchy)
+                continue;
             var teamGameObject = enemyPieces[index];
             var teamGameObjectGridPosition = GetGridPosition(teamGameObject);
-            var pieceID = teamGameObject.GetComponent<PieceIdentity>();
-            //Debug.Log("We are entering");
             if (IsValidPosition(teamGameObject,teamGameObjectGridPosition,currentKingGridPosition, false))
             {
                 Debug.Log("This is what has us in check: "+ teamGameObject);
@@ -1593,7 +1590,6 @@ public class Pawn : MonoBehaviour
                 return true;
             }
         }
-
         inCheck.isInCheck = false;
         return false;
     }
@@ -1714,10 +1710,10 @@ public class Pawn : MonoBehaviour
             }
             
             //loop through enemy team to see if any pieces can reach the king
-            for (var i = 0; i < opposingTeamPieces.Count; i++)
+            foreach (var t in opposingTeamPieces)
             {
                 //check if any enemy piece can reach the king
-                if (IsValidPosition(opposingTeamPieces[i], GetGridPosition(opposingTeamPieces[i]), kingPosition, false))
+                if (IsValidPosition(t, GetGridPosition(t), kingPosition, false))
                 {
                     //Debug.Log("Wtf are you: " + opposingTeamPieces[i]);
                     if (pieceEliminated != null)
@@ -1734,26 +1730,21 @@ public class Pawn : MonoBehaviour
                 pieceEliminated.SetActive(true);
             }
         }
-        //Debug.Log("This move does not place us in check ");
         return false; 
     }
 
     //this code is to prevent your own move from placing your king in check
     private bool WillMovePlaceOurKingInCheck(GameObject hitPieceGameObject,List<GameObject> enemyPieces, Vector3Int hitPosition, Vector3Int kingPosition)
     {
-        // Objective 1: We need to remove the current piece at is location 
-        // Objective 2: We need to have the opposing team loop check if getting to the king is valid now (call inCheck)
-
         var teamKing = Instance.state == GameStates.PlayerTurn1 ? kings : kings2;
         GameObject kingGameObject = teamKing[0];
-        //Debug.Log("Deactived piece: " + hitPieceGameObject);
         hitPieceGameObject.SetActive(false);
         //Debug.Log("Is it true: " + (InCheck(kingGameObject, enemyPieces) == true));
         if (hitPieceGameObject.activeInHierarchy == false)
         {
-            //Debug.Log("Still de-actived");
+            
         }
-        if (InCheck(kingGameObject, enemyPieces) == true)
+        if (InCheck(kingGameObject, enemyPieces))
         {
             Debug.Log("This move will place our king in check so its invalid");
             hitPieceGameObject.SetActive(true);
@@ -1866,9 +1857,7 @@ public class Pawn : MonoBehaviour
         foreach(var item in Team2)
         {
             if (item.activeInHierarchy)
-            {
                 activePieces.Add(item);
-            }
         }
         return activePieces;
     }
@@ -2093,6 +2082,36 @@ public class Pawn : MonoBehaviour
         }   
         Instance.UpdateGameState(GameStates.PlayerTurn2);
         
+    }
+
+    public void SpawnMiniMaxBoardState(Dictionary<Vector3Int, Piece> currentBoard)
+    {
+        foreach (var piece in allPieces)
+            piece.SetActive(false);
+        foreach (var kvp in currentBoard)
+        {
+            //get piece type and then look for the board that will 
+            var type = kvp.Value.Type;
+            foreach (var piece in allPieces)
+            {
+                //find a valid piece and then active it followed by moving it to position
+                if (!piece.activeInHierarchy &&
+                    boardState.Convert2(piece.GetComponent<PieceIdentity>().pieceType) == kvp.Value.Type &&
+                    kvp.Value.Team == Team.Black && piece.CompareTag("Player1"))
+                {
+                    piece.SetActive(true);
+                    MoveToCenterOfGrid(kvp.Key, piece);
+                }
+                else if (!piece.activeInHierarchy &&
+                         boardState.Convert2(piece.GetComponent<PieceIdentity>().pieceType) == kvp.Value.Type &&
+                         kvp.Value.Team == Team.White && piece.CompareTag("Player2"))
+                {
+                    piece.SetActive(true);
+                    MoveToCenterOfGrid(kvp.Key,piece);
+                }
+            }
+        }
+
     }
 
 

@@ -2,12 +2,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
+using Object = System.Object;
 
 public class BoardState : MonoBehaviour
 {
-   public Dictionary<Vector3Int, Piece> _gridPositions = new Dictionary<Vector3Int, Piece>();
+   public Dictionary<Vector3Int, Piece> GridPositions = new Dictionary<Vector3Int, Piece>();
    private Pawn _pawnInstance;
    private ChessPieceType _pieceSelected;
    private AllValidMoves _allValidMoves;
@@ -26,37 +28,37 @@ public class BoardState : MonoBehaviour
        //black pieces
        for (int i = 0; i < 8; i++)
        {
-           _gridPositions[new Vector3Int(0, i, 0)] = new Piece(Identity.Pawn, Team.Black);
+           GridPositions[new Vector3Int(0, i, 0)] = new Piece(Identity.Pawn, Team.Black);
        }
-       _gridPositions[new Vector3Int(1, 0, 0)] = new Piece(Identity.Rook, Team.Black);
-       _gridPositions[new Vector3Int(1, 1, 0)] = new Piece(Identity.Knight, Team.Black);
-       _gridPositions[new Vector3Int(1, 2, 0)] = new Piece(Identity.Bishop, Team.Black);
-       _gridPositions[new Vector3Int(1, 3, 0)] = new Piece(Identity.Queen, Team.Black);
-       _gridPositions[new Vector3Int(1, 4, 0)] = new Piece(Identity.King, Team.Black);
-       _gridPositions[new Vector3Int(1, 5, 0)] = new Piece(Identity.Bishop, Team.Black);
-       _gridPositions[new Vector3Int(1, 6, 0)] = new Piece(Identity.Knight, Team.Black);
-       _gridPositions[new Vector3Int(1, 7, 0)] = new Piece(Identity.Rook, Team.Black);
+       GridPositions[new Vector3Int(1, 0, 0)] = new Piece(Identity.Rook, Team.Black);
+       GridPositions[new Vector3Int(1, 1, 0)] = new Piece(Identity.Knight, Team.Black);
+       GridPositions[new Vector3Int(1, 2, 0)] = new Piece(Identity.Bishop, Team.Black);
+       GridPositions[new Vector3Int(1, 3, 0)] = new Piece(Identity.Queen, Team.Black);
+       GridPositions[new Vector3Int(1, 4, 0)] = new Piece(Identity.King, Team.Black);
+       GridPositions[new Vector3Int(1, 5, 0)] = new Piece(Identity.Bishop, Team.Black);
+       GridPositions[new Vector3Int(1, 6, 0)] = new Piece(Identity.Knight, Team.Black);
+       GridPositions[new Vector3Int(1, 7, 0)] = new Piece(Identity.Rook, Team.Black);
        
        //white pieces
        for (int i = 0; i < 8; i++)
        {
-           _gridPositions[new Vector3Int(-5, i, 0)] = new Piece(Identity.Pawn, Team.White);
+           GridPositions[new Vector3Int(-5, i, 0)] = new Piece(Identity.Pawn, Team.White);
        }
-       _gridPositions[new Vector3Int(-6, 0, 0)] = new Piece(Identity.Rook, Team.White);
-       _gridPositions[new Vector3Int(-6, 1, 0)] = new Piece(Identity.Knight, Team.White);
-       _gridPositions[new Vector3Int(-6, 2, 0)] = new Piece(Identity.Bishop, Team.White);
-       _gridPositions[new Vector3Int(-6, 3, 0)] = new Piece(Identity.Queen, Team.White);
-       _gridPositions[new Vector3Int(-6, 4, 0)] = new Piece(Identity.King, Team.White);
-       _gridPositions[new Vector3Int(-6, 5, 0)] = new Piece(Identity.Bishop, Team.White);
-       _gridPositions[new Vector3Int(-6, 6, 0)] = new Piece(Identity.Knight, Team.White);
-       _gridPositions[new Vector3Int(-6, 7, 0)] = new Piece(Identity.Rook, Team.White);
+       GridPositions[new Vector3Int(-6, 0, 0)] = new Piece(Identity.Rook, Team.White);
+       GridPositions[new Vector3Int(-6, 1, 0)] = new Piece(Identity.Knight, Team.White);
+       GridPositions[new Vector3Int(-6, 2, 0)] = new Piece(Identity.Bishop, Team.White);
+       GridPositions[new Vector3Int(-6, 3, 0)] = new Piece(Identity.Queen, Team.White);
+       GridPositions[new Vector3Int(-6, 4, 0)] = new Piece(Identity.King, Team.White);
+       GridPositions[new Vector3Int(-6, 5, 0)] = new Piece(Identity.Bishop, Team.White);
+       GridPositions[new Vector3Int(-6, 6, 0)] = new Piece(Identity.Knight, Team.White);
+       GridPositions[new Vector3Int(-6, 7, 0)] = new Piece(Identity.Rook, Team.White);
       
    }
    
    //after the human makes a turn the AI needs to get the current state of the board
    public void UpdateBoardStateAfterHumanTurn()
    {
-       _gridPositions.Clear();
+       GridPositions.Clear();
        AddPiecesToBoard(_pawnInstance.Team1, Team.White);
        AddPiecesToBoard(_pawnInstance.Team2, Team.Black);
    }
@@ -71,18 +73,19 @@ public class BoardState : MonoBehaviour
 
            var position = _pawnInstance.GetGridPosition(pieceGO);
            var pieceType = pieceGO.GetComponent<PieceIdentity>().pieceType; // returns Identity enum
-           _gridPositions[position] = Convert(pieceType);
+           GridPositions[position] = Convert(pieceType);
        }
    }
    //when we first call minimax we will pass the global board dictionary
    public int MiniMax(Dictionary<Vector3Int, Piece> currentBoard, int depth, bool isMaximizer, bool storeMove)
    {
-       if(depth == 0 || CheckMate(currentBoard, true) )
-           return _evaluateBoard.GetBoardScore(currentBoard, true);
+       if(depth == 0)
+           return _evaluateBoard.GetBoardScore(currentBoard);
        
        if (isMaximizer)
        {
            var maxVal = -10000;
+           var wasAMoveFound = false;
            //check each piece in the board
            foreach (var kvp in currentBoard)
            {
@@ -91,9 +94,10 @@ public class BoardState : MonoBehaviour
                    //get all valid moves for current piece
                    var list = _allValidMoves.GetCandidates(kvp.Value, kvp.Key,true);
                    foreach (var position in list)
-                   {    //can the piece reach the square? (here is where we create the new board dictionary)
+                   {    //can the piece reach the possible square? (here is where we create the new board dictionary)
                        if (IsValidPosition(kvp.Key, position, currentBoard) && !WillMovePlaceUsInCheck(kvp.Key, position, currentBoard, true))
                        {
+                           wasAMoveFound = true;
                            var newBoard = new Dictionary<Vector3Int, Piece>();
                            //deep copy (if for the valid move)
                            foreach (var kvp1 in currentBoard) 
@@ -107,21 +111,24 @@ public class BoardState : MonoBehaviour
                                maxVal = score;
                                //here we store the move that was taken 
                                if (storeMove)
-                               {
-                                   _from = kvp.Key;
-                                   _to = position;
-                                   _piece = kvp.Value;
-                               }
+                               { _from = kvp.Key; _to = position; _piece = kvp.Value; }
                            }
                        }
                    }
                }
            }
+            //this board state generated no valid moves !
+           if (!wasAMoveFound)
+           {
+               return CheckMate(currentBoard, true) ? 10000 : 0;
+           }
+
            return maxVal;
        }
        else
        {
            var minVal = 10000;
+           var wasAMoveFound = false;
            foreach (var kvp in currentBoard)
            {
                if (kvp.Value.Team == Team.Black)
@@ -131,6 +138,7 @@ public class BoardState : MonoBehaviour
                    {    //can the piece reach the square? (here is where we create the new board dictionary)
                        if (IsValidPosition(kvp.Key, position, currentBoard) && !WillMovePlaceUsInCheck(kvp.Key, position, currentBoard, false))
                        {
+                           wasAMoveFound = true; 
                            var newBoard = new Dictionary<Vector3Int, Piece>();
                            //deep copy (if for the valid move)
                            foreach (var kvp1 in currentBoard) 
@@ -144,20 +152,24 @@ public class BoardState : MonoBehaviour
                    }
                }
            }
+           if (!wasAMoveFound)
+           {
+               return CheckMate(currentBoard, true) ? 10000 : 0;
+           }
            return minVal;
        }
    }
    
-   //commit move will create the board that we to continue the generation of the tree
-   private Dictionary<Vector3Int,Piece> CommitMove(bool isMaximizer, Dictionary<Vector3Int, Piece> currentBoard, Vector3Int pieceToMove)
+   //here will commit the chosen move from minimax
+   public Dictionary<Vector3Int, Piece> CommitMove(Vector3Int from, Vector3Int to, Piece piece, Dictionary<Vector3Int, Piece> currentBoard)
    {
-       //we need to get all team pieces first
-       Dictionary<Vector3Int, Piece> newBoard = new Dictionary<Vector3Int, Piece>();
-       return newBoard;
+       currentBoard.Remove(from);
+       currentBoard[to] = piece;
+       return currentBoard;
    }
 
    //this for move validation (might not need this now)
-   public bool IsValidPosition(Vector3Int currentPosition, Vector3Int destinationPosition, Dictionary<Vector3Int, Piece> currentBoard)
+   private bool IsValidPosition(Vector3Int currentPosition, Vector3Int destinationPosition, Dictionary<Vector3Int, Piece> currentBoard)
     { 
         if (IsOutOfBounds(destinationPosition))
             return false;
@@ -583,6 +595,29 @@ public static Piece Convert(ChessPieceType oldType)
         default: return null;
     }
 }
+
+public Identity? Convert2(ChessPieceType oldType)
+{
+    switch (oldType)
+    {
+        case ChessPieceType.Player1Pawn:   return Identity.Pawn;
+        case ChessPieceType.Player1Rook:   return Identity.Rook;
+        case ChessPieceType.Player1Knight: return Identity.Knight;
+        case ChessPieceType.Player1Bishop: return Identity.Bishop;
+        case ChessPieceType.Player1Queen:  return Identity.Queen;
+        case ChessPieceType.Player1King:   return Identity.King;
+
+        case ChessPieceType.Player2Pawn:   return Identity.Pawn;
+        case ChessPieceType.Player2Rook:   return Identity.Rook;
+        case ChessPieceType.Player2Knight: return Identity.Knight;
+        case ChessPieceType.Player2Bishop: return Identity.Bishop;
+        case ChessPieceType.Player2Queen:  return Identity.Queen;
+        case ChessPieceType.Player2King:   return Identity.King;
+
+        default: return null;
+    }
+}
+
 }
 
 

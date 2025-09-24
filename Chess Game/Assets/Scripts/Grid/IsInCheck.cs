@@ -5,5 +5,4 @@ using UnityEngine;
 public class IsInCheck : MonoBehaviour
 {
     public bool isInCheck = false; 
-
 }

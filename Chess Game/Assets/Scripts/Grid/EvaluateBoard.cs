@@ -30,43 +30,25 @@ public class EvaluateBoard : MonoBehaviour
     } 
     
     
-    public int GetBoardScore(Dictionary<Vector3Int, Piece> board, bool isMaximizer)
+    public int GetBoardScore(Dictionary<Vector3Int, Piece> board)
     {
-        var score = 0;
-        if(isMaximizer)
+        int score = 0;
+
+        foreach (var piece in board)
         {
-            //loop through and count the score for each piece
-            foreach (var piece in board)
+            switch (piece.Value.Team)
             {
-                switch (piece.Value.Team)
-                {
-                    case Team.White:
-                        score += GetPieceValue(piece.Value);
-                        break;
-                    case Team.Black:
-                        score -= GetPieceValue(piece.Value);
-                        break;
-                }
+                case Team.White:
+                    score += GetPieceValue(piece.Value);
+                    break;
+                case Team.Black:
+                    score -= GetPieceValue(piece.Value); 
+                    break;
             }
         }
-        else
-        {
-            //loop through and count the score for each piece
-            foreach (var piece in board)
-            {
-                switch (piece.Value.Team)
-                {
-                    case Team.Black:
-                        score += GetPieceValue(piece.Value);
-                        break;
-                    case Team.White:
-                        score -= GetPieceValue(piece.Value);
-                        break;
-                }
-            }
-        }
-        
+
         return score;
     }
+
     
 }
