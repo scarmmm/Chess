@@ -732,7 +732,6 @@ MonoBehaviour:
   allPieces: []
   Team1: []
   Team2: []
-  eliminatedPlayer: Eliminated
   _referenceGameObject: {fileID: 0}
   canCastle: 0
   hasCastled: 0
@@ -4892,7 +4891,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   state: 0
-  gameMode: 0
+  gameMode: 2
 --- !u!4 &1997161856
 Transform:
   m_ObjectHideFlags: 0

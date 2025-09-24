@@ -8,7 +8,7 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance; 
     public GameStates state;
-    public GameMode gameMode;
+    public GameMode gameMode = GameMode.LocalMultiPlayer;
     public static event Action<GameStates> OnGameStateChanged;
 
     private Pawn _pawn;
@@ -16,9 +16,7 @@ public class GameManager : MonoBehaviour
     private void Awake()
     {
         if (!Instance)
-        {
             Instance = this;
-        }
     }
     void Start()
     {

@@ -485,7 +485,6 @@ public class Pawn : MonoBehaviour
                             PlayerTurn(hit, gridPosition, "Player2");
                             break;
                         case GameMode.AIEasy:
-                            break;
                         case GameMode.AIMedium:
                             break;
                         default:
@@ -522,7 +521,7 @@ public class Pawn : MonoBehaviour
             }
             // we can check if this move will get us out of check if it does we can proceed
             //Debug.Log("Entering: WillMovePlaceOurKingInCheck ");
-            if (WillMovePlaceOurKingInCheck(selectedPawn, enemyList, gridPosition, kingPosition) && 
+            if (WillMovePlaceOurKingInCheck(gridPosition, kingPosition) && 
                 !InCheck(kingGameObject,enemyList))
             {
                 Debug.Log("This move will place our king in check so no!");
@@ -558,13 +557,11 @@ public class Pawn : MonoBehaviour
                     _referenceGameObject = hit.collider.gameObject;
                 }
             }
-            //Debug.Log(_referenceGameObject);
             var grid = GetGridPosition(selectedPawn);
             gridPosition.z = 0; 
             var currentPiece = selectedPawn;
             
             //handle moving the currently selected piece (need to refactor this)
-            //Debug.Log("was the move valid?" + (IsValidPosition(currentPiece,grid, gridPosition, true)));
             if (IsValidPosition(currentPiece,grid, gridPosition, true))
             {
                 //check if the piece is able to castle
@@ -693,29 +690,21 @@ public class Pawn : MonoBehaviour
                         return true;
                     }
                     if (Mathf.Abs(destinationPosition.x - selectedPawnGridPos.x) == 2 && destinationPosition.y == selectedPawnGridPos.y && !isBlocked && isThisMovingThePiece == false)
-                    {
                         return true;
-                    }
                     //don't need this
                     switch (piece.pieceType)
                     {
                         case ChessPieceType.Player1Pawn:
                         {
-                            if ( selectedPawnGridPos.x - destinationPosition.x == 1 &&
-                                 destinationPosition.y == selectedPawnGridPos.y && !isBlocked)
-                            {
+                            if (selectedPawnGridPos.x - destinationPosition.x == 1 && destinationPosition.y == selectedPawnGridPos.y && !isBlocked)
                                 return true;
-                            }
-
                             break;
                         }
                         case ChessPieceType.Player2Pawn:
                         {
                             if (destinationPosition.x - selectedPawnGridPos.x == 1 &&
                                 destinationPosition.y == selectedPawnGridPos.y && !isBlocked)
-                            {
                                 return true; 
-                            }
 
                             break;
                         }
@@ -727,22 +716,14 @@ public class Pawn : MonoBehaviour
                 {
                     case ChessPieceType.Player1Pawn:
                     {
-                        if ( selectedPawnGridPos.x - destinationPosition.x == 1 &&
-                             destinationPosition.y == selectedPawnGridPos.y && !isBlocked)
-                        {
+                        if ( selectedPawnGridPos.x - destinationPosition.x == 1 && destinationPosition.y == selectedPawnGridPos.y && !isBlocked)
                             return true;
-                        }
-
                         break;
                     }
                     case ChessPieceType.Player2Pawn:
                     {
-                        if (destinationPosition.x - selectedPawnGridPos.x == 1 &&
-                            destinationPosition.y == selectedPawnGridPos.y && !isBlocked)
-                        {
+                        if (destinationPosition.x - selectedPawnGridPos.x == 1 && destinationPosition.y == selectedPawnGridPos.y && !isBlocked)
                             return true; 
-                        }
-
                         break;
                     }
                 }
@@ -753,7 +734,6 @@ public class Pawn : MonoBehaviour
             case ChessPieceType.Player2Rook:
             {
                 //let's check for castling (get the hit) 
-                var selectedRookGridPos = GetGridPosition(currentPiece);
                 if (_referenceGameObject != null && !hasCastled)
                 {
                     var hitPieceIdentity = _referenceGameObject.GetComponent<PieceIdentity>();
@@ -769,7 +749,7 @@ public class Pawn : MonoBehaviour
                             Castle(currentPiece, _referenceGameObject);
                             AdjustPieceHeight(currentPiece);
                             AdjustPieceHeight(_referenceGameObject);
-                            if (canCastle == true) return true;
+                            if (canCastle) return true;
                         }
                     }
                 }
@@ -796,7 +776,7 @@ public class Pawn : MonoBehaviour
                         return false;
                     }
                 }
-                return isValid;
+                return false;
         }
             
             case ChessPieceType.Player1Bishop:
@@ -1082,7 +1062,7 @@ public class Pawn : MonoBehaviour
         {
             //check if any of these moves will places us in check
             // the location cannot be taken
-            if (WillKingMovePlaceUsInCheck(currentPiece, validKingMoves[i])  == false)
+            if (!WillKingMovePlaceUsInCheck(currentPiece, validKingMoves[i]))
             {
                 //if at least one move is valid we can still play
                 Debug.Log(validKingMoves[i]);
@@ -1294,16 +1274,14 @@ public class Pawn : MonoBehaviour
                                 Vector3Int vec3 = new Vector3Int(i, currentY, -1);
                                 positions.Add(vec3);;
                             }
-                            if (isDiagonal == false)
+                            if (!isDiagonal)
                             {
                                 positions.Clear();
                                 return true;
                             }
 
-                            if (DiagonalPathBlocked(positions, teamId,hit) == true) 
-                            {
+                            if (DiagonalPathBlocked(positions, teamId,hit)) 
                                 return true; 
-                            }
                             break;
                         default:
                             Debug.Log("I really messed up if we execute this");
@@ -1423,7 +1401,7 @@ public class Pawn : MonoBehaviour
                             return true;
                         }
 
-                        if (DiagonalPathBlocked(positions, teamId,hit) == true) //might need to be true idk
+                        if (DiagonalPathBlocked(positions, teamId,hit)) //might need to be true idk
                         {
                             return true; 
                         }
@@ -1571,24 +1549,16 @@ public class Pawn : MonoBehaviour
         currentPiece.transform.position = _grid.GetCellCenterWorld(secondPieceLocation);
         referencePiece.transform.position = _grid.GetCellCenterWorld(firstPieceLocation);
     }
-
+    
     private bool InCheck(GameObject teamKing, List<GameObject> enemyPieces)
     {
-        var currentKingGridPosition = GetGridPosition(teamKing);
+        var kingPosition = GetGridPosition(teamKing);
         var inCheck = teamKing.GetComponent<IsInCheck>();
-        
-        for (var index = 0; index < enemyPieces.Count; index++)
+        var currentBoard = ConvertGameObjectsToDictionary();
+        if (boardState.IsGridUnderAttack(kingPosition, currentBoard))
         {
-            if(!enemyPieces[index].activeInHierarchy)
-                continue;
-            var teamGameObject = enemyPieces[index];
-            var teamGameObjectGridPosition = GetGridPosition(teamGameObject);
-            if (IsValidPosition(teamGameObject,teamGameObjectGridPosition,currentKingGridPosition, false))
-            {
-                Debug.Log("This is what has us in check: "+ teamGameObject);
-                inCheck.isInCheck = true; 
-                return true;
-            }
+            inCheck.isInCheck = true;
+            return true;
         }
         inCheck.isInCheck = false;
         return false;
@@ -1734,24 +1704,11 @@ public class Pawn : MonoBehaviour
     }
 
     //this code is to prevent your own move from placing your king in check
-    private bool WillMovePlaceOurKingInCheck(GameObject hitPieceGameObject,List<GameObject> enemyPieces, Vector3Int hitPosition, Vector3Int kingPosition)
+    private bool WillMovePlaceOurKingInCheck(Vector3Int hitPosition, Vector3Int kingPosition)
     {
-        var teamKing = Instance.state == GameStates.PlayerTurn1 ? kings : kings2;
-        GameObject kingGameObject = teamKing[0];
-        hitPieceGameObject.SetActive(false);
-        //Debug.Log("Is it true: " + (InCheck(kingGameObject, enemyPieces) == true));
-        if (hitPieceGameObject.activeInHierarchy == false)
-        {
-            
-        }
-        if (InCheck(kingGameObject, enemyPieces))
-        {
-            Debug.Log("This move will place our king in check so its invalid");
-            hitPieceGameObject.SetActive(true);
-            return true; 
-        }
-        hitPieceGameObject.SetActive(true);
-        return false; 
+        var currentBoard = ConvertGameObjectsToDictionary();
+        var isMaximizer = Instance.GetCurrentGameState() != GameStates.PlayerTurn1;
+        return boardState.WillMovePlaceUsInCheck(kingPosition, hitPosition, currentBoard,isMaximizer);
     }
 
     public void HandlePromotion(GameObject currentPiece)
@@ -2112,6 +2069,20 @@ public class Pawn : MonoBehaviour
             }
         }
 
+    }
+
+    private Dictionary<Vector3Int, Piece> ConvertGameObjectsToDictionary()
+    {
+        Dictionary<Vector3Int, Piece> result = new Dictionary<Vector3Int, Piece>();
+        foreach (var piece in allPieces)
+        {
+            if(!piece.activeInHierarchy)
+                continue;
+            var id = boardState.Convert2(piece.GetComponent<PieceIdentity>().pieceType);
+            var team = piece.CompareTag("Player1") ? Team.Black : Team.White;
+            if (id != null) result.Add(GetGridPosition(piece), new Piece((Identity)id, team));
+        }
+        return result;
     }
 
 

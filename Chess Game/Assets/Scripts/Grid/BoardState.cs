@@ -263,7 +263,7 @@ public class BoardState : MonoBehaviour
         return false; // no obstacles
     }
 
-    private bool WillMovePlaceUsInCheck(Vector3Int currentPosition, Vector3Int destination, Dictionary<Vector3Int, Piece> currentBoard, bool isMaximizer)
+    public bool WillMovePlaceUsInCheck(Vector3Int currentPosition, Vector3Int destination, Dictionary<Vector3Int, Piece> currentBoard, bool isMaximizer)
     {
         //let's get the piece we are trying to move
         if (!currentBoard.TryGetValue(currentPosition, out Piece movingPiece))
@@ -284,20 +284,27 @@ public class BoardState : MonoBehaviour
 
     
     //check if a piece is under attack
-    private bool IsGridUnderAttack(Vector3Int destination, Dictionary<Vector3Int, Piece> currentBoard)
+    public bool IsGridUnderAttack(Vector3Int destination, Dictionary<Vector3Int, Piece> currentBoard)
     {
-        // look through attacker pieces
-        foreach (var piece in currentBoard)
+        // see if the destination exists
+        if (!currentBoard.TryGetValue(destination, out var targetPiece))
+            targetPiece = null;
+        // Look through enemy pieces
+        foreach (var kvp in currentBoard)
         {
-            Piece p = piece.Value;
-            //run the if statement if we find an enemy is at this grid location
-            if (p.Team != currentBoard[destination].Team)
-            { 
-                CanPieceReachSquare(piece.Key,destination, currentBoard);
-            }
+            Piece attacker = kvp.Value;
+
+            // don't check friendly pieces
+            if (targetPiece != null && attacker.Team == targetPiece.Team)
+                continue;
+
+            if (CanPieceReachSquare(kvp.Key, destination, currentBoard))
+                return true; //square is under attack
         }
-        return false; 
+
+        return false; //we are safe
     }
+
 
 ///////////////////helper functions///////////////////////
     private bool CanPieceReachSquare(Vector3Int piecePosition, Vector3Int destination, Dictionary<Vector3Int, Piece> currentBoard)
