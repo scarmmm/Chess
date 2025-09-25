@@ -419,39 +419,8 @@ public class Pawn : MonoBehaviour
         
     }
     
-    private void Update()
+    public void OnSquareClicked(RaycastHit hit, Vector3Int gridPosition)
     {
-
-        if (kings.Count == 0 || kings2.Count == 0 || kings[0] == null || kings2[0] == null)
-        {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex - 1);
-        }
-        SetPosition();
-        
-    }
-
-    private void SetPosition()
-    {
-        //this code will actively track the mouse position and convert it to a grid position
-        //screen position function did not work had to use raycast to get the world space position
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        //Debug.DrawRay(ray.origin, ray.direction * 100, Color.red, 1f);
-        RaycastHit hit;
-        int layerMask = LayerMask.GetMask("Chessboard");
-        if (!Physics.Raycast(ray, out hit, Mathf.Infinity, layerMask)) return;
-        if (!Input.GetMouseButtonDown(0)) return;
-        //Debug.Log("Did we enter set Position?");
-        //Debug.Log(hit.collider.gameObject == gameObject.CompareTag("ChessBoard"));
-        if (selectedPawn == null)
-        {
-            if (hit.collider == null || hit.collider.gameObject == gameObject.CompareTag("Untagged")) return;
-        }
-
-        Vector3 worldMousePosition = hit.point; //get the world position of the mouse
-        //below is the hitPosition
-        Vector3Int gridPosition = _grid.WorldToCell(worldMousePosition); //convert the world position to a grid position(this works)
-        //Debug.Log("Mouse0 Clicked");
-        //Debug.Log("Hit Position" + gridPosition);
         if (selectedPawn != null)
         {
             if (gridPosition == GetGridPosition(selectedPawn))
@@ -460,9 +429,9 @@ public class Pawn : MonoBehaviour
                 return;
             }
         }
+    
         ProcessMouseClick(hit, gridPosition, Instance.state);
     }
-
     void ProcessMouseClick(RaycastHit hit, Vector3Int gridPosition, GameStates state)
     {
        
@@ -523,7 +492,9 @@ public class Pawn : MonoBehaviour
             if (InCheck(kingGameObject, enemyList))
             {
                 Debug.Log("Valid: this move resolves the check.");
+                selectedPawn = teamKing[0];
             }
+            
             else
             {
                 // 3. If not in check, just make sure the move doesn’t *put* us in check
@@ -679,33 +650,13 @@ public class Pawn : MonoBehaviour
                 }
                 if (pawnComponent != null && pawnComponent.isFirstMove)
                 {
-                    if (Mathf.Abs(destinationPosition.x - selectedPawnGridPos.x) == 2 && destinationPosition.y == selectedPawnGridPos.y && !isBlocked && isThisMovingThePiece == true)
+                    if (Mathf.Abs(destinationPosition.x - selectedPawnGridPos.x) == 2 && destinationPosition.y == selectedPawnGridPos.y && !isBlocked && isThisMovingThePiece &&!isPathBlocked)
                     {
                         pawnComponent.isFirstMove = false;
                         return true;
                     }
-                    if (Mathf.Abs(destinationPosition.x - selectedPawnGridPos.x) == 2 && destinationPosition.y == selectedPawnGridPos.y && !isBlocked && isThisMovingThePiece == false)
+                    if (Mathf.Abs(destinationPosition.x - selectedPawnGridPos.x) == 2 && destinationPosition.y == selectedPawnGridPos.y && !isBlocked && !isThisMovingThePiece && !isPathBlocked)
                         return true;
-                    //don't need this
-                    switch (piece.pieceType)
-                    {
-                        case ChessPieceType.Player1Pawn:
-                        {
-                            if (selectedPawnGridPos.x - destinationPosition.x == 1 && destinationPosition.y == selectedPawnGridPos.y && !isBlocked)
-                                return true;
-                            break;
-                        }
-                        case ChessPieceType.Player2Pawn:
-                        {
-                            if (destinationPosition.x - selectedPawnGridPos.x == 1 &&
-                                destinationPosition.y == selectedPawnGridPos.y && !isBlocked)
-                                return true; 
-
-                            break;
-                        }
-                        default:
-                            return false;
-                    }
                 }
                 switch (piece.pieceType)
                 {
@@ -906,7 +857,6 @@ public class Pawn : MonoBehaviour
                     var pieceGo = t;
                     if (Mathf.Approximately(pieceGridLocation.x, destination.x) && Mathf.Approximately(pieceGridLocation.y, destination.y) && pieceGo.activeInHierarchy)
                     {
-                        Debug.Log("Piece is blocked");
                         return true;
                     }
                 }
@@ -1572,19 +1522,16 @@ public class Pawn : MonoBehaviour
         if (!currentBoard.ContainsKey(kingPosition))
         {
             Debug.LogWarning($"King not found at {kingPosition} in currentBoard!");
-            return true; // treat as unsafe
+            return true; // unsafe
         }
-        //wrong parameters should not be kingposition
-        return boardState.WillMovePlaceUsInCheck(kingPosition, hitPosition, currentBoard, isMaximizer);
+        var currentPiecePosition = GetGridPosition(selectedPawn);
+        return boardState.WillMovePlaceUsInCheck(currentPiecePosition, hitPosition, currentBoard, isMaximizer);
     }
 
     //the following function is to prevents us from moving the king to a check position
     private bool WillKingMovePlaceUsInCheck(GameObject king, Vector3Int hitPosition)
     {
-        // take a snapshot of the board
         var currentBoard = ConvertGameObjectsToDictionary();
-
-        // simulate the king move in that snapshot
         var team = king.CompareTag("Player1") ? Team.Black : Team.White;
         var id = boardState.Convert2(king.GetComponent<PieceIdentity>().pieceType);
 

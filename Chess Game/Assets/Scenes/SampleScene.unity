@@ -645,6 +645,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 184958032}
+    - targetCorrespondingSourceObject: {fileID: 3078556132249698505, guid: c4cbf7a638d1375488e98de5795ffa1f,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 184958033}
   m_SourcePrefab: {fileID: 100100000, guid: c4cbf7a638d1375488e98de5795ffa1f, type: 3}
 --- !u!1 &184958023 stripped
 GameObject:
@@ -889,6 +893,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 658db75745bad1a4a9ae27cce7ae3358, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &184958033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 184958023}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a731b675f2157bf4c9009d71425b3c2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _grid: {fileID: 1881339917}
+  chessboardMask:
+    serializedVersion: 2
+    m_Bits: 8
+  pawn: {fileID: 184958026}
 --- !u!1 &199569094
 GameObject:
   m_ObjectHideFlags: 0
@@ -1715,7 +1736,7 @@ Light:
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 2
+    m_Type: 0
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
