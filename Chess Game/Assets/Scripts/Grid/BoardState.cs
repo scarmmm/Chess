@@ -22,7 +22,6 @@ public class BoardState : MonoBehaviour
    {
        SetGridPositions();
    }
-   
    private void SetGridPositions()
    {
        //black pieces
@@ -70,7 +69,6 @@ public class BoardState : MonoBehaviour
        {
            if (!pieceGO.activeInHierarchy)
                continue;
-
            var position = _pawnInstance.GetGridPosition(pieceGO);
            var pieceType = pieceGO.GetComponent<PieceIdentity>().pieceType; // returns Identity enum
            GridPositions[position] = Convert(pieceType);
@@ -277,9 +275,7 @@ public class BoardState : MonoBehaviour
         // Apply the move on the copy and remove the old position
         newBoard[destination] = movingPiece;
         newBoard.Remove(currentPosition);
-        if(IsGridUnderAttack(kingPosition,newBoard))
-            return true; 
-        return false; 
+        return IsGridUnderAttack(kingPosition,newBoard);
     }   
 
     
@@ -291,15 +287,20 @@ public class BoardState : MonoBehaviour
             targetPiece = null;
         // Look through enemy pieces
         foreach (var kvp in currentBoard)
-        {
+        {   
             Piece attacker = kvp.Value;
 
             // don't check friendly pieces
             if (targetPiece != null && attacker.Team == targetPiece.Team)
                 continue;
-
             if (CanPieceReachSquare(kvp.Key, destination, currentBoard))
+            {
+                Debug.Log(targetPiece.Team);
+                Debug.Log(destination);
+                Debug.Log("This has us in check" + kvp.Key + kvp.Value.Team + kvp.Value.Type);
                 return true; //square is under attack
+            }
+            
         }
 
         return false; //we are safe
@@ -309,7 +310,7 @@ public class BoardState : MonoBehaviour
 ///////////////////helper functions///////////////////////
     private bool CanPieceReachSquare(Vector3Int piecePosition, Vector3Int destination, Dictionary<Vector3Int, Piece> currentBoard)
     {
-        var pieceID =currentBoard[piecePosition].Type;
+        var pieceID= currentBoard[piecePosition].Type;
         switch (pieceID)
         {
             case Identity.Pawn:

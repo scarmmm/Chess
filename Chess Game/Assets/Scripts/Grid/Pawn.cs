@@ -465,6 +465,7 @@ public class Pawn : MonoBehaviour
 
     void ProcessMouseClick(RaycastHit hit, Vector3Int gridPosition, GameStates state)
     {
+       
         // this if statement is to select the piece 
         if (!selectedPawn) // we currently don't have a piece selected
         {
@@ -506,39 +507,34 @@ public class Pawn : MonoBehaviour
             GameObject kingGameObject = teamKing[0];
             Vector3Int kingPosition = GetGridPosition(kingGameObject);
             
+            
             //////////////////////////////////////////////////////////////////////////////////////////////////
-            //here we will check if this move with our king will place us in check
-            // re-insert code for in check here
-            //here we will check if this move with our king will place us in check
-            if (id.pieceType == ChessPieceType.Player1King || id.pieceType == ChessPieceType.Player2King )
+            if (id.pieceType == ChessPieceType.Player1King || id.pieceType == ChessPieceType.Player2King)
             {
                 if (WillKingMovePlaceUsInCheck(selectedPawn, gridPosition))
                 {
-                    Debug.Log("This move with our king will place us in check");
-                    selectedPawn = null; 
+                    Debug.Log("Invalid: King would move into check.");
+                    selectedPawn = null;
                     return;
                 }
             }
-            // we can check if this move will get us out of check if it does we can proceed
-            //Debug.Log("Entering: WillMovePlaceOurKingInCheck ");
-            if (WillMovePlaceOurKingInCheck(gridPosition, kingPosition) && 
-                !InCheck(kingGameObject,enemyList))
+
+            // 2. If we are currently in check, only allow moves that resolve it
+            if (InCheck(kingGameObject, enemyList))
             {
-                Debug.Log("This move will place our king in check so no!");
-                selectedPawn = null; 
-                return;
+                Debug.Log("Valid: this move resolves the check.");
             }
-            
-            if (InCheck(kingGameObject,enemyList))
+            else
             {
-                if (WillPieceMoveGetUsOutOfCheck(selectedPawn, enemyList, gridPosition, kingPosition))
-                    Debug.Log("We are in check but got out");
-                else
+                // 3. If not in check, just make sure the move doesn’t *put* us in check
+                if (WillMovePlaceOurKingInCheck(gridPosition, kingPosition))
                 {
-                    Debug.Log("we have to use our king");
-                    selectedPawn = kingGameObject;
+                    Debug.Log("Invalid: this move places king in check.");
+                    selectedPawn = null;
+                    return;
                 }
-            } 
+            }
+
             ///////////////////////////////////////////////////////////////////////////////////////////////
             
             var currentPieceComp = selectedPawn.GetComponent<PieceIdentity>();
@@ -560,7 +556,6 @@ public class Pawn : MonoBehaviour
             var grid = GetGridPosition(selectedPawn);
             gridPosition.z = 0; 
             var currentPiece = selectedPawn;
-            
             //handle moving the currently selected piece (need to refactor this)
             if (IsValidPosition(currentPiece,grid, gridPosition, true))
             {
@@ -575,7 +570,7 @@ public class Pawn : MonoBehaviour
                     HandlePromotion(currentPiece);
                 if (selectedPawn != null)
                     lastSelectedPiece = selectedPawn;
-                Debug.Log(GetGridPosition(selectedPawn));
+                //Debug.Log(GetGridPosition(selectedPawn));
                 selectedPawn = null; // deselect the pawn after moving
                 audioSource.clip = piecePlaced;
                 audioSource.Play();
@@ -888,6 +883,7 @@ public class Pawn : MonoBehaviour
     public Vector3Int GetGridPosition(GameObject pawn)
     {
         var gridPosition = _grid.WorldToCell(pawn.transform.position);
+        gridPosition.z = 0;
         return gridPosition;
     }
 
@@ -1554,41 +1550,56 @@ public class Pawn : MonoBehaviour
     {
         var kingPosition = GetGridPosition(teamKing);
         var inCheck = teamKing.GetComponent<IsInCheck>();
-        var currentBoard = ConvertGameObjectsToDictionary();
-        if (boardState.IsGridUnderAttack(kingPosition, currentBoard))
-        {
-            inCheck.isInCheck = true;
-            return true;
-        }
-        inCheck.isInCheck = false;
-        return false;
-    }
-    //the following function is to prevents us from moving the king to a check position
-    private bool WillKingMovePlaceUsInCheck(GameObject CurrentPiece, Vector3Int hitPosition)
-    {
-        //we need to check if the path is blocked 
-        PieceIdentity pieceIdentity = CurrentPiece.GetComponent<PieceIdentity>();
-        List<GameObject> teamId;
-        teamId = CurrentPiece.CompareTag("Player1") ? Team2 : Team1;
-        List<GameObject> opposingPieces = new List<GameObject>(teamId);
-        //the following code will check to see if any of the opposing pieces can reach the hit position 
-        for (int i = 0; i < opposingPieces.Count; i++)
-        {
-            if(!opposingPieces[i].activeInHierarchy)
-                continue;
-            var currPiece = opposingPieces[i];
-            var currentPosition = GetGridPosition(currPiece);
-            //this will check if any of the enemy pieces can reach the new king position 
-            if (IsValidPosition(currPiece, currentPosition, hitPosition, false))
-            {
-               Debug.Log("This is piece" + currPiece);
-               Debug.Log("This move will place us in check!");
-               return true;
-            }
-        }
 
-        return false; 
+        var currentBoard = ConvertGameObjectsToDictionary();
+        if (!currentBoard.ContainsKey(kingPosition))
+        {
+            Debug.Log("king position is empty");
+            return false;
+        }
+        bool attacked = boardState.IsGridUnderAttack(kingPosition, currentBoard);
+        inCheck.isInCheck = attacked;
+        return attacked;
     }
+    //this code is to prevent your own move from placing your king in check
+    private bool WillMovePlaceOurKingInCheck(Vector3Int hitPosition, Vector3Int kingPosition)
+    {
+        var currentBoard = ConvertGameObjectsToDictionary();
+        var isMaximizer = true;
+        if (Instance.GetCurrentGameState() == GameStates.PlayerTurn1)
+            isMaximizer = false;
+        // make sure king is not missing
+        if (!currentBoard.ContainsKey(kingPosition))
+        {
+            Debug.LogWarning($"King not found at {kingPosition} in currentBoard!");
+            return true; // treat as unsafe
+        }
+        //wrong parameters should not be kingposition
+        return boardState.WillMovePlaceUsInCheck(kingPosition, hitPosition, currentBoard, isMaximizer);
+    }
+
+    //the following function is to prevents us from moving the king to a check position
+    private bool WillKingMovePlaceUsInCheck(GameObject king, Vector3Int hitPosition)
+    {
+        // take a snapshot of the board
+        var currentBoard = ConvertGameObjectsToDictionary();
+
+        // simulate the king move in that snapshot
+        var team = king.CompareTag("Player1") ? Team.Black : Team.White;
+        var id = boardState.Convert2(king.GetComponent<PieceIdentity>().pieceType);
+
+        // remove old position
+        var oldPosition = GetGridPosition(king);
+        currentBoard.Remove(oldPosition);
+
+        // place king in new position
+        if (id != null)
+            currentBoard[hitPosition] = new Piece((Identity)id, team);
+
+        // check if new king square is attacked
+        return boardState.IsGridUnderAttack(hitPosition, currentBoard);
+    }
+
     private List<Vector3Int> GetAllValidPositionsforKing(List<Vector3Int> allValidPositions, Vector3Int currentPositionofKing)
     {
         List<Vector3Int> templist = new List<Vector3Int>();
@@ -1691,7 +1702,6 @@ public class Pawn : MonoBehaviour
                         //set active so we eliminate it in the later turn
                         pieceEliminated.SetActive(true);
                     }
-                    //Debug.Log("This is invalid because our King will be placed in check!");
                     return true;
                 }
             }
@@ -1703,13 +1713,6 @@ public class Pawn : MonoBehaviour
         return false; 
     }
 
-    //this code is to prevent your own move from placing your king in check
-    private bool WillMovePlaceOurKingInCheck(Vector3Int hitPosition, Vector3Int kingPosition)
-    {
-        var currentBoard = ConvertGameObjectsToDictionary();
-        var isMaximizer = Instance.GetCurrentGameState() != GameStates.PlayerTurn1;
-        return boardState.WillMovePlaceUsInCheck(kingPosition, hitPosition, currentBoard,isMaximizer);
-    }
 
     public void HandlePromotion(GameObject currentPiece)
     {
