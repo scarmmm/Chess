@@ -18,7 +18,7 @@ using Vector3 = UnityEngine.Vector3;
 public class Pawn : MonoBehaviour
 {
     public AllValidMoves currentMove;
-    public AI aiController; 
+    [FormerlySerializedAs("aiController")] public EasyAI easyAIController; 
     public GameOver gameOverScreen;
     public UI_Promotion promotionScreen;
     [SerializeField]public BoardState boardState;
@@ -26,7 +26,6 @@ public class Pawn : MonoBehaviour
     [SerializeField] private int _playerNumber; // Player number for the pawn
     [SerializeField] public CharacterController controller; // Reference to the CharacterController component
     [SerializeField] public Grid _grid;
-    [SerializeField] private float playerSpeed = 2.0f;
     [SerializeField] private GameObject _pawn;
     [SerializeField] private GameObject _rook;
     [SerializeField] private GameObject _bishop;
@@ -34,7 +33,6 @@ public class Pawn : MonoBehaviour
     [SerializeField] private GameObject _queen;
     [SerializeField] private GameObject _king;
     [SerializeField] private GameObject _position;
-    [SerializeField] private float rotationSpeed = 5.0f;
     [SerializeField] private InputReader inputReader;
     [SerializeField] public Material team1; 
     [SerializeField] public Material team2;
@@ -53,28 +51,22 @@ public class Pawn : MonoBehaviour
     private List<GameObject> queens = new List<GameObject>();
     private List<GameObject> queens2 = new List<GameObject>();
     [SerializeField]private List<GameObject> kings = new List<GameObject>();
-    [SerializeField]private List<GameObject> kings2 = new List<GameObject>();
+    [SerializeField]public List<GameObject> kings2 = new List<GameObject>();
     [SerializeField]public List<GameObject> allPieces = new List<GameObject>();
     public List<GameObject> Team1 = new List<GameObject>();
     public List<GameObject> Team2 = new List<GameObject>();
     private Vector3 _playerVelocity;
-    private bool _player1KingCaptured = false;
-    private bool _player2KingCaptured = false;
     private bool _validPiece = false;
     private Camera _camera;
-    private bool _stateHasChanged = false;
-    private bool _firstTurn = true;
    [SerializeField] private GameObject _referenceGameObject;
    [SerializeField] private bool canCastle = false;
    [SerializeField] private bool hasCastled = false;
     //below needs to become a component
    [SerializeField] private bool weAreInCheck = false; 
    [SerializeField] private UI_SelectedPiece selectedPieceUI;
-   private bool _isSelecting = true;
     // Start is called before the first frame update
     private void Start()
     {
-        GameStates state = GameStates.SelectPiece;
         //player 1 pawns
         //could have handled this better was not thinking
         for (int i = 0; i < 8; i++)
@@ -469,7 +461,6 @@ public class Pawn : MonoBehaviour
         //processes second click (move selected piece)
         else
         {
-            bool isMovingPiece = false; 
             var id = selectedPawn.GetComponent<PieceIdentity>();
             var enemyList = GameManager.Instance.state == GameStates.PlayerTurn1 ? Team2 : Team1;
             var teamKing = GameManager.Instance.state == GameStates.PlayerTurn1 ? kings : kings2;
@@ -491,10 +482,19 @@ public class Pawn : MonoBehaviour
             // 2. If we are currently in check, only allow moves that resolve it
             if (InCheck(kingGameObject, enemyList))
             {
-                Debug.Log("Valid: this move resolves the check.");
+                Debug.Log("we are in check");
+                //check if king can get us out of check
+                var currentBoard = ConvertGameObjectsToDictionary();
+                //if no piece can get us out of check its game over
+                var isMaximizer = Instance.state == GameStates.PlayerTurn1 ? false : true;
+                if (!boardState.WillPieceRemoveCheck(kingPosition, currentBoard, isMaximizer))
+                {
+                    Debug.Log(1);
+                    GameOver(1);
+                    return;
+                }
                 selectedPawn = teamKing[0];
             }
-            
             else
             {
                 // 3. If not in check, just make sure the move doesn’t *put* us in check
@@ -559,6 +559,8 @@ public class Pawn : MonoBehaviour
     public IEnumerator HandleAIEasyMove()
     {
         yield return new WaitForSeconds(1f);
+        if (IsGameOver())
+            GameOver(2);
         var list = GetActivePieces();
         GameObject randomPiece = null;
         var isThereAValidMove = false;
@@ -566,11 +568,11 @@ public class Pawn : MonoBehaviour
         while (!isThereAValidMove)
         {
             //get a random piece to generate a move
-            randomPiece = AI.ReturnRandomPiece(list);
+            randomPiece = easyAIController.ReturnRandomPiece(list);
             //get all possible moves
             var allPossibleMoves = currentMove.GetCandidates(randomPiece, GetGridPosition(randomPiece));
             //get a random move
-            isThereAValidMove = aiController.GetRandomMove(randomPiece, GetGridPosition(randomPiece),allPossibleMoves);
+            isThereAValidMove = easyAIController.GetRandomMove(randomPiece, GetGridPosition(randomPiece),allPossibleMoves);
         }
         selectedPawn = randomPiece;
         if (selectedPawn != null)
@@ -585,10 +587,50 @@ public class Pawn : MonoBehaviour
     {
         yield return new WaitForSeconds(1f);
         //we have to get both list and create our global board state for the script
+        if (IsGameOver())
+            GameOver(2);
         boardState.UpdateBoardStateAfterHumanTurn();
-        boardState.MiniMax(boardState.GridPositions, 4, true, false);
+        boardState.MiniMax(boardState.GridPositions, 3, true, true);
+        GameObject choosenPiece = null; 
+        foreach (var piece in Team2)
+        {
+            if(!piece.activeInHierarchy)
+                continue;
+            if (GetGridPosition(piece) == boardState.from)
+            {
+                MoveToCenterOfGrid(boardState.to, piece);
+                AdjustPieceHeight(piece);
+                choosenPiece = piece;
+            }
+        }
+        selectedPawn = choosenPiece;
+        if (selectedPawn != null)
+            lastSelectedPiece = selectedPawn;
         audioSource.Play();
-        GameManager.Instance.UpdateGameState(GameStates.PlayerTurn1);
+        Instance.UpdateGameState(GameStates.PlayerTurn1);
+        selectedPawn = null;
+    }
+
+    private bool IsGameOver()
+    {
+        var currentState = Instance.state;
+        var kingGameObject = currentState == GameStates.PlayerTurn1 ? kings[0] : kings2[0];
+        var enemyList = GameManager.Instance.state == GameStates.PlayerTurn1 ? Team2 : Team1;
+        var kingPosition = GetGridPosition(kingGameObject);
+        if (InCheck(kingGameObject, enemyList))
+        {
+            Debug.Log("we are in check");
+            //check if king can get us out of check
+            var currentBoard = ConvertGameObjectsToDictionary();
+            //if no piece can get us out of check its game over
+            var isMaximizer = Instance.state == GameStates.PlayerTurn1 ? false : true;
+            if (!boardState.WillPieceRemoveCheck(kingPosition, currentBoard, isMaximizer))
+            {
+                return true;
+            }
+            selectedPawn = kingGameObject;
+        }
+        return false;
     }
 
     private void PlayerTurn(RaycastHit hit, Vector3Int gridPosition, string player)
@@ -797,24 +839,7 @@ public class Pawn : MonoBehaviour
                 //the following code will handle the logic if the king is in check (moves and end condition)
                 if (weAreInCheck2 && selectedPawn == currentPiece)
                 { //lets create a check for whether there is a valid move remaining and then we should be done with the chess game
-                    List<Vector3Int> allValidPositions = new List<Vector3Int>();
-                    var currentPositionofKing = GetGridPosition(currentPiece);
-                    allValidPositions= GetAllValidPositionsforKing(allValidPositions, currentPositionofKing);
-                    Debug.Log("Can we get out of check: " + CanWeGetOutofCheck(currentPiece, allValidPositions));
-                    if (!CanWeGetOutofCheck(currentPiece, allValidPositions))
-                    {
-                        //call the function that will end the game soon
-                        var currentState = Instance.state;
-                        var teamID = currentState == GameStates.PlayerTurn1 ? 1 : 2;   
-                        GameOver(teamID);
-                        return false; 
-                    }
-                    //if this is true then we cannot move to this location and will return an invalid move
-                    if (WillKingMovePlaceUsInCheck(currentPiece, destinationPosition))
-                    {
-                        Debug.Log("Move will place us in check");
-                        return false;
-                    }
+                    
                 }
                 float deltaX = Mathf.Abs(destinationPosition.x - currentPosition.x);
                 float deltaY = Mathf.Abs(destinationPosition.y - currentPosition.y);
@@ -1002,7 +1027,7 @@ public class Pawn : MonoBehaviour
     }
 
     private bool CanWeGetOutofCheck(GameObject currentPiece, List<Vector3Int> validKingMoves)
-    {
+    {   
         //this logic is broken
         for (int i = 0; i < validKingMoves.Count; i++)
         {
@@ -1971,7 +1996,7 @@ public class Pawn : MonoBehaviour
                 piece.SetActive(true);
             }
         }
-        Vector3Int pawn1Position = new Vector3Int(-2, 4, 0);
+        Vector3Int pawn1Position = new Vector3Int(-2, 2, 0);
         Vector3Int pawn2Position = new Vector3Int(-3, 3, 0);
         //below is where we will place the pieces
         foreach (var piece in allPieces)
@@ -2020,8 +2045,68 @@ public class Pawn : MonoBehaviour
         }
 
     }
+    
+    public void CreateBoardState_CheckmateInOne()
+    {
 
-    private Dictionary<Vector3Int, Piece> ConvertGameObjectsToDictionary()
+        foreach (var piece in allPieces)
+        {
+            if (piece.GetComponent<PieceIdentity>().pieceType == ChessPieceType.Player2Pawn &&
+                GetGridPosition(piece) == new Vector3Int(-5, 4, 0))
+            {
+                var newPosition = new Vector3Int(-4, 4, 0);
+                MoveToCenterOfGrid(newPosition, piece);
+                AdjustPieceHeight(piece);
+            }
+            else if (piece.GetComponent<PieceIdentity>().pieceType == ChessPieceType.Player1Pawn &&
+                GetGridPosition(piece) == new Vector3Int(0, 6, 0))
+            {
+                var newPosition = new Vector3Int(-2, 6, 0);
+                MoveToCenterOfGrid(newPosition, piece);
+                AdjustPieceHeight(piece);
+            }
+            else if (piece.GetComponent<PieceIdentity>().pieceType == ChessPieceType.Player1Pawn &&
+                     GetGridPosition(piece) == new Vector3Int(0, 5, 0))
+            {
+                var newPosition = new Vector3Int(-1, 5, 0);
+                MoveToCenterOfGrid(newPosition, piece);
+                AdjustPieceHeight(piece);
+            }
+        }
+        Instance.UpdateGameState(GameStates.PlayerTurn2);
+    }
+
+    public void CreateSecondCheckMate()
+    {
+        foreach (var piece in allPieces)
+        {
+            if (piece.GetComponent<PieceIdentity>().pieceType == ChessPieceType.Player1Pawn &&
+                GetGridPosition(piece) == new Vector3Int(0, 2, 0))
+            {
+                var newPosition = new Vector3Int(-2, 2, 0);
+                MoveToCenterOfGrid(newPosition, piece);
+                AdjustPieceHeight(piece);
+            }
+            else if (piece.GetComponent<PieceIdentity>().pieceType == ChessPieceType.Player2Pawn &&
+                     GetGridPosition(piece) == new Vector3Int(-5, 5, 0))
+            {
+                var newPosition = new Vector3Int(-3, 5, 0);
+                MoveToCenterOfGrid(newPosition, piece);
+                AdjustPieceHeight(piece);
+            }
+            else if (piece.GetComponent<PieceIdentity>().pieceType == ChessPieceType.Player2Pawn &&
+                     GetGridPosition(piece) == new Vector3Int(-5, 6, 0))
+            {
+                var newPosition = new Vector3Int(-3,6, 0);
+                MoveToCenterOfGrid(newPosition, piece);
+                AdjustPieceHeight(piece);
+            }
+        }
+        Instance.UpdateGameState(GameStates.PlayerTurn1);
+    }
+
+
+    public Dictionary<Vector3Int, Piece> ConvertGameObjectsToDictionary()
     {
         Dictionary<Vector3Int, Piece> result = new Dictionary<Vector3Int, Piece>();
         foreach (var piece in allPieces)
@@ -2030,7 +2115,12 @@ public class Pawn : MonoBehaviour
                 continue;
             var id = boardState.Convert2(piece.GetComponent<PieceIdentity>().pieceType);
             var team = piece.CompareTag("Player1") ? Team.Black : Team.White;
-            if (id != null) result.Add(GetGridPosition(piece), new Piece((Identity)id, team));
+            if (id != null)
+            {
+                var pos = GetGridPosition(piece);
+                result[pos] = new Piece((Identity)id, team);
+            }
+
         }
         return result;
     }

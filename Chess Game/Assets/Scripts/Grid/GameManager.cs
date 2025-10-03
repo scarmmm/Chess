@@ -36,13 +36,17 @@ public class GameManager : MonoBehaviour
                 Debug.Log("Player 1's turn");
                 break;
             case GameStates.PlayerTurn2:
-                if (gameMode == GameMode.AIEasy)
+                switch (gameMode)
                 {
-                    Debug.Log("Started AI easy code");
-                    StartCoroutine(FindObjectOfType<Pawn>().HandleAIEasyMove());
+                    case GameMode.AIEasy:
+                        Debug.Log("Started AI easy code");
+                        StartCoroutine(FindObjectOfType<Pawn>().HandleAIEasyMove());
+                        break;
+                    case GameMode.AIMedium:
+                        Debug.Log("Running minimax");
+                        StartCoroutine(FindObjectOfType<Pawn>().HandleMediumAIMove());
+                        break;
                 }
-                else if (gameMode == GameMode.AIMedium)
-                    Debug.Log("We will run out minimax here");  
                 break;
             case GameStates.Victory:
                 //Debug.Log("Victory");

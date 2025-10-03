@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Xml.Schema;
 using UnityEngine;
 
 public class EvaluateBoard : MonoBehaviour
@@ -23,6 +24,9 @@ public class EvaluateBoard : MonoBehaviour
                 break;
             case Identity.King:
                 value = 100;
+                break;
+            default:
+                value = 0;
                 break;
         }
 

@@ -76,11 +76,9 @@ public class AllValidMoves : MonoBehaviour
             case Identity.King:
                 AddKingMoves(candidates, currentPosition);
                 break;
-
             case Identity.Knight:
                 AddKnightMoves(candidates, currentPosition);
                 break;
-
             case Identity.Pawn:
                 if (piece.Team == Team.Black)
                     id = ChessPieceType.Player1Pawn;
@@ -129,7 +127,7 @@ public class AllValidMoves : MonoBehaviour
         var twoStep = new Vector3Int(currentPosition.x + 2 * forward, currentPosition.y, 0);
         if (!hasMoved && IsInsideBoard(twoStep))
             candidates.Add(twoStep);
-
+    
         // Capture diagonals
         var diagLeft  = new Vector3Int(currentPosition.x + forward, currentPosition.y - 1, 0);
         var diagRight = new Vector3Int(currentPosition.x + forward, currentPosition.y + 1, 0);

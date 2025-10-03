@@ -4,82 +4,75 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.Mathematics;
 using Unity.VisualScripting;
+using UnityEditor.Rendering;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Object = System.Object;
 
 public class BoardState : MonoBehaviour
 {
-   public Dictionary<Vector3Int, Piece> GridPositions = new Dictionary<Vector3Int, Piece>();
-   private Pawn _pawnInstance;
+   [SerializeField] public Dictionary<Vector3Int, Piece> GridPositions = new Dictionary<Vector3Int, Piece>();
+   [SerializeField]private Pawn _pawnInstance;
    private ChessPieceType _pieceSelected;
-   private AllValidMoves _allValidMoves;
+   [SerializeField]private AllValidMoves _allValidMoves;
    private bool _isMaximizer;
-   private EvaluateBoard _evaluateBoard;
-   private Vector3Int _from;
-   private Vector3Int _to;
-   private Piece _piece;
-   private void Start()
+   [SerializeField]private EvaluateBoard _evaluateBoard;
+   [FormerlySerializedAs("_from")] public Vector3Int from;
+   [FormerlySerializedAs("_to")] public Vector3Int to;
+   public Piece Piece;
+   [SerializeField] private int runs;
+   public void ButtonTestQueen()
    {
-       SetGridPositions();
+       var position = new Vector3Int(-2, 7, 0);
+       var queenPosition = new Vector3Int(-6, 3, 0);
+       var canReach = CanQueenReachSquare(queenPosition, position, _pawnInstance.ConvertGameObjectsToDictionary());
+       Debug.Log($"Can queen reach target? {canReach}");
    }
-   private void SetGridPositions()
-   {
-       //black pieces
-       for (int i = 0; i < 8; i++)
-       {
-           GridPositions[new Vector3Int(0, i, 0)] = new Piece(Identity.Pawn, Team.Black);
-       }
-       GridPositions[new Vector3Int(1, 0, 0)] = new Piece(Identity.Rook, Team.Black);
-       GridPositions[new Vector3Int(1, 1, 0)] = new Piece(Identity.Knight, Team.Black);
-       GridPositions[new Vector3Int(1, 2, 0)] = new Piece(Identity.Bishop, Team.Black);
-       GridPositions[new Vector3Int(1, 3, 0)] = new Piece(Identity.Queen, Team.Black);
-       GridPositions[new Vector3Int(1, 4, 0)] = new Piece(Identity.King, Team.Black);
-       GridPositions[new Vector3Int(1, 5, 0)] = new Piece(Identity.Bishop, Team.Black);
-       GridPositions[new Vector3Int(1, 6, 0)] = new Piece(Identity.Knight, Team.Black);
-       GridPositions[new Vector3Int(1, 7, 0)] = new Piece(Identity.Rook, Team.Black);
-       
-       //white pieces
-       for (int i = 0; i < 8; i++)
-       {
-           GridPositions[new Vector3Int(-5, i, 0)] = new Piece(Identity.Pawn, Team.White);
-       }
-       GridPositions[new Vector3Int(-6, 0, 0)] = new Piece(Identity.Rook, Team.White);
-       GridPositions[new Vector3Int(-6, 1, 0)] = new Piece(Identity.Knight, Team.White);
-       GridPositions[new Vector3Int(-6, 2, 0)] = new Piece(Identity.Bishop, Team.White);
-       GridPositions[new Vector3Int(-6, 3, 0)] = new Piece(Identity.Queen, Team.White);
-       GridPositions[new Vector3Int(-6, 4, 0)] = new Piece(Identity.King, Team.White);
-       GridPositions[new Vector3Int(-6, 5, 0)] = new Piece(Identity.Bishop, Team.White);
-       GridPositions[new Vector3Int(-6, 6, 0)] = new Piece(Identity.Knight, Team.White);
-       GridPositions[new Vector3Int(-6, 7, 0)] = new Piece(Identity.Rook, Team.White);
-      
-   }
-   
+
+
    //after the human makes a turn the AI needs to get the current state of the board
    public void UpdateBoardStateAfterHumanTurn()
    {
        GridPositions.Clear();
-       AddPiecesToBoard(_pawnInstance.Team1, Team.White);
-       AddPiecesToBoard(_pawnInstance.Team2, Team.Black);
+       AddPiecesToBoard(_pawnInstance.allPieces);
    }
 
    //only add active pieces to board
-   private void AddPiecesToBoard(IEnumerable<GameObject> pieces, Team team)
+   private void AddPiecesToBoard(List<GameObject> pieces)
    {
-       foreach (var pieceGO in pieces)
+       foreach (var pieceGo in pieces)
        {
-           if (!pieceGO.activeInHierarchy)
+           if (!pieceGo.activeInHierarchy)
                continue;
-           var position = _pawnInstance.GetGridPosition(pieceGO);
-           var pieceType = pieceGO.GetComponent<PieceIdentity>().pieceType; // returns Identity enum
-           GridPositions[position] = Convert(pieceType);
+           var position = _pawnInstance.GetGridPosition(pieceGo);
+           var pieceType = pieceGo.GetComponent<PieceIdentity>().pieceType; 
+           if (!GridPositions.ContainsKey(position))
+            GridPositions.Add(position, Convert(pieceType));
        }
    }
    //when we first call minimax we will pass the global board dictionary
    public int MiniMax(Dictionary<Vector3Int, Piece> currentBoard, int depth, bool isMaximizer, bool storeMove)
    {
-       if(depth == 0)
+       //queen may not be checkmating, idk yet tho
+       if(depth == 2)
+       {
+           if (CheckMate(currentBoard, false))
+           {
+               //Check if black is mated
+               Debug.Log($"Checkmate at depth:  {depth} ");
+               return int.MaxValue; 
+           }
+       }
+       if (CheckMate(currentBoard, true))
+       {
+           return int.MinValue;
+       }
+       if (depth == 0)
+       {
+           runs++;
            return _evaluateBoard.GetBoardScore(currentBoard);
-       
+       }
+
        if (isMaximizer)
        {
            var maxVal = -10000;
@@ -89,12 +82,13 @@ public class BoardState : MonoBehaviour
            {
                if (kvp.Value.Team == Team.White)
                {
-                   //get all valid moves for current piece
                    var list = _allValidMoves.GetCandidates(kvp.Value, kvp.Key,true);
                    foreach (var position in list)
-                   {    //can the piece reach the possible square? (here is where we create the new board dictionary)
+                   {  //can the piece reach the possible square? (here is where we create the new board dictionary)
                        if (IsValidPosition(kvp.Key, position, currentBoard) && !WillMovePlaceUsInCheck(kvp.Key, position, currentBoard, true))
                        {
+                           //Debug.Log("entered here 1");
+                           //Debug.Log(position);
                            wasAMoveFound = true;
                            var newBoard = new Dictionary<Vector3Int, Piece>();
                            //deep copy (if for the valid move)
@@ -109,18 +103,17 @@ public class BoardState : MonoBehaviour
                                maxVal = score;
                                //here we store the move that was taken 
                                if (storeMove)
-                               { _from = kvp.Key; _to = position; _piece = kvp.Value; }
+                               { from = kvp.Key; to = position; Piece = kvp.Value; }
                            }
                        }
                    }
                }
            }
-            //this board state generated no valid moves !
+            //this board state generated no valid moves!
            if (!wasAMoveFound)
            {
                return CheckMate(currentBoard, true) ? 10000 : 0;
            }
-
            return maxVal;
        }
        else
@@ -182,21 +175,24 @@ public class BoardState : MonoBehaviour
                if(currentBoard[currentPosition].Team == Team.Black) 
                {
                    if (dy == 0 && dx == -1 && !currentBoard.ContainsKey(destinationPosition)) return true; // single forward and check if empty
-                   //if (dy == 0 && dx == -2 && isThisMovingThePiece && currentBoard[destinationPosition].Team == Team.White) return true; // double move forward + location empty (need to make sure that it cannot do this after first move) *MUST FIX*
-                   if (Mathf.Abs(dy) == 1 && dx == -1 && currentBoard[destinationPosition].Team == Team.White) return true; // diagonal capture if there is an enemy piece there
+                   if (currentBoard.ContainsKey(destinationPosition) && currentBoard[destinationPosition].Team == Team.White)
+                   {
+                       if (Mathf.Abs(dy) == 1 && dx == -1 || Mathf.Abs(dy) == -1 && dx == -1 ) return true; // diagonal capture if there is an enemy piece there
+                   }
                    return false;
                }
                if (dy == 0 && dx == 1 && !currentBoard.ContainsKey(destinationPosition)) return true; // single forward and check if empty
-               //if (dy == 0 && dx == 2 && isThisMovingThePiece && currentBoard[destinationPosition].Team == Team.Black) this is the double move that needs to be fixed later
-                   //return true; // double forward (first move)
-               if (Mathf.Abs(dy) == 1 && dx == 1 && currentBoard[destinationPosition].Team == Team.Black)
-                   return true; // diagonal capture
+               if (currentBoard.ContainsKey(destinationPosition) && currentBoard[destinationPosition].Team == Team.Black)
+               {
+                   if (Mathf.Abs(dy) == 1 && dx == -1 || Mathf.Abs(dy) == 1 && dx == 1 ) return true; // diagonal capture if there is an enemy piece there
+               }
                return false;
-
             //ROOK 
             case Identity.Rook:
             {
                 if (dx != 0 && dy != 0) return false; // check if the destination is horizontal/vertical, if not return false
+                //we move a distance of 1 and have to not overlap our own piece (fixing later)
+                if (currentBoard.ContainsKey(destinationPosition) && currentBoard[destinationPosition].Team == currentBoard[currentPosition].Team && Math.Abs(dx) ==1) return false;
                 if (PathIsBlocked(currentPosition, destinationPosition, currentBoard)) return false;
                 return true;
             }
@@ -205,6 +201,7 @@ public class BoardState : MonoBehaviour
             case Identity.Bishop:
             {
                 if (Mathf.Abs(dx) != Mathf.Abs(dy)) return false; // must be diagonal
+                if (currentBoard.ContainsKey(destinationPosition) && currentBoard[destinationPosition].Team == currentBoard[currentPosition].Team) return false;
                 if (PathIsBlocked(currentPosition, destinationPosition,currentBoard)) return false;
                 return true;
             }
@@ -215,6 +212,7 @@ public class BoardState : MonoBehaviour
                 var isStraight = (dx == 0 || dy == 0);
                 var isDiagonal = Mathf.Abs(dx) == Mathf.Abs(dy);
                 if (!isStraight && !isDiagonal) return false;
+                if (currentBoard.ContainsKey(destinationPosition) && currentBoard[destinationPosition].Team == currentBoard[currentPosition].Team) return false;
                 if (PathIsBlocked(currentPosition, destinationPosition, currentBoard)) return false;
                 return true;
             }
@@ -238,11 +236,17 @@ public class BoardState : MonoBehaviour
 
     private static bool PathIsBlocked(Vector3Int currentPosition, Vector3Int destination, Dictionary<Vector3Int, Piece> currentBoard)
     {
+        //make sure we are not checking the same square (will cause infinite loop that will crash GAME!!)
+        if (currentPosition == destination)
+            return false;
         //will let us know what direction we have to iterate towards
         var dx = Math.Sign(destination.x - currentPosition.x);
         var dy = Math.Sign(destination.y - currentPosition.y);
 
-        // move one square at a time until just before the destination
+        // Only allow straight or diagonal moves
+        if (! (dx == 0 || dy == 0 || Math.Abs(destination.x - currentPosition.x) == Math.Abs(destination.y - currentPosition.y)) )
+            return true; 
+        // advance towards the next square
         var x = currentPosition.x + dx;
         var y = currentPosition.y + dy;
     
@@ -295,9 +299,6 @@ public class BoardState : MonoBehaviour
                 continue;
             if (CanPieceReachSquare(kvp.Key, destination, currentBoard))
             {
-                Debug.Log(targetPiece.Team);
-                Debug.Log(destination);
-                Debug.Log("This has us in check" + kvp.Key + kvp.Value.Team + kvp.Value.Type);
                 return true; //square is under attack
             }
             
@@ -340,7 +341,7 @@ public class BoardState : MonoBehaviour
         return true;
     }
 
-    private bool WillPieceRemoveCheck(Vector3Int kingPosition, Dictionary<Vector3Int, Piece> currentBoard, bool isMaximizer)
+    public bool WillPieceRemoveCheck(Vector3Int kingPosition, Dictionary<Vector3Int, Piece> currentBoard, bool isMaximizer)
     { 
         //here is a list of all possible moves
         var allMoves = GetAllPossibleMoveForTeam(currentBoard, isMaximizer);
@@ -364,6 +365,7 @@ public class BoardState : MonoBehaviour
                         newBoard.Remove(keyValue.Key);
                         if (!IsGridUnderAttack(kingPosition, newBoard))
                         {
+                            Debug.Log($"This is the piece {keyValue.Value.Type} / {keyValue.Value.Team} that can reach it, with the following move -> {move}");
                             return true;
                         }
 
@@ -388,6 +390,8 @@ public class BoardState : MonoBehaviour
                         newBoard.Remove(keyValue.Key);
                         if (!IsGridUnderAttack(kingPosition, newBoard))
                         {
+                            Debug.Log($"Location -> {keyValue.Key}");
+                            Debug.Log($"This is the piece {keyValue.Value.Type} / {keyValue.Value.Team} that can reach it, with the following move -> {move}");
                             return true;
                         }
 
@@ -440,14 +444,19 @@ public class BoardState : MonoBehaviour
             if (currentBoard[pawnPosition].Team == Team.Black)
             {
                 if (dy == 0 && dx == -1 && !currentBoard.ContainsKey(destination)) return true; // single forward
-                //if (dy == 0 && dx == -2 && destinationID == ID.None)
-                    //return true; // double move forward + location empty (need to make sure that it cannot do this after first move) *MUST FIX*
-                if (Mathf.Abs(dy) == 1 && dx == -1)
-                    return true; // diagonal capture if there is an enemy piece there
+                if (currentBoard.ContainsKey(destination) && currentBoard[destination].Team == Team.White)
+                {
+                    if (dy == -1 && dx == -1)
+                        return true;
+                    if (dy == 1 && dx == -1)
+                        return true;
+                }
                 break;
             }
             if (dy == 0 && dx == 1 && !currentBoard.ContainsKey(destination)) return true; // single forward
-            //if (dy == 0 && dx == 2 && destinationID == ID.None) return true; // double forward (first move)
+            //if there is no piece diagonally it's not possible to capture
+            if (!currentBoard.ContainsKey(destination))
+                return false;
             if (Mathf.Abs(dy) == 1 && dx == 1 && currentBoard[destination].Team != currentBoard[pawnPosition].Team) return true; // diagonal capture
             break;
         default:
@@ -529,8 +538,6 @@ private bool CanQueenReachSquare(Vector3Int queenPosition, Vector3Int destinatio
         return false;
     return true; 
 }
-
-
 private bool CanKingReachSquare(Vector3Int kingPosition, Vector3Int destination, Dictionary<Vector3Int, Piece> currentBoard)
 {
     //////////////MIGHT NEED TO FIX (LAST IF) ///////////////////////
@@ -580,7 +587,7 @@ private bool IsOutOfBounds(Vector3Int destination)
         return true;
     if(destination.y is >7 or <0)
         return true;
-    return false; 
+    return false;   
 }
 public static Piece Convert(ChessPieceType oldType)
 {
