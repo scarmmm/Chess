@@ -32,8 +32,8 @@ public class AllValidMoves : MonoBehaviour
             case ChessPieceType.Player1Pawn:
                 case ChessPieceType.Player2Pawn:
                     var firstMoveComponent = pieceSelected.GetComponent<PawnMove>();
-                    var hasMoved = firstMoveComponent.isFirstMove;
-                    AddPawnMoves(candidates, currentPosition,id,hasMoved);
+                    var isFirstMove = firstMoveComponent.isFirstMove;
+                    AddPawnMoves(candidates, currentPosition,id,isFirstMove);
                     break;
             case ChessPieceType.Player1Queen:
                 case ChessPieceType.Player2Queen:
@@ -125,7 +125,7 @@ public class AllValidMoves : MonoBehaviour
 
         // Double step forward (only if not moved)
         var twoStep = new Vector3Int(currentPosition.x + 2 * forward, currentPosition.y, 0);
-        if (!hasMoved && IsInsideBoard(twoStep))
+        if (hasMoved && IsInsideBoard(twoStep))
             candidates.Add(twoStep);
     
         // Capture diagonals

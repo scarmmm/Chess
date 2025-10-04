@@ -160,7 +160,7 @@ public class BoardState : MonoBehaviour
    }
 
    //this for move validation (might not need this now)
-   private bool IsValidPosition(Vector3Int currentPosition, Vector3Int destinationPosition, Dictionary<Vector3Int, Piece> currentBoard)
+   public bool IsValidPosition(Vector3Int currentPosition, Vector3Int destinationPosition, Dictionary<Vector3Int, Piece> currentBoard)
     { 
         if (IsOutOfBounds(destinationPosition))
             return false;
@@ -193,8 +193,7 @@ public class BoardState : MonoBehaviour
                 if (dx != 0 && dy != 0) return false; // check if the destination is horizontal/vertical, if not return false
                 //we move a distance of 1 and have to not overlap our own piece (fixing later)
                 if (currentBoard.ContainsKey(destinationPosition) && currentBoard[destinationPosition].Team == currentBoard[currentPosition].Team && Math.Abs(dx) ==1) return false;
-                if (PathIsBlocked(currentPosition, destinationPosition, currentBoard)) return false;
-                return true;
+                return !PathIsBlocked(currentPosition, destinationPosition, currentBoard);
             }
 
             //BISHOP
@@ -202,10 +201,8 @@ public class BoardState : MonoBehaviour
             {
                 if (Mathf.Abs(dx) != Mathf.Abs(dy)) return false; // must be diagonal
                 if (currentBoard.ContainsKey(destinationPosition) && currentBoard[destinationPosition].Team == currentBoard[currentPosition].Team) return false;
-                if (PathIsBlocked(currentPosition, destinationPosition,currentBoard)) return false;
-                return true;
+                return !PathIsBlocked(currentPosition, destinationPosition,currentBoard);
             }
-
             // QUEEN
             case Identity.Queen:
             {
@@ -213,22 +210,20 @@ public class BoardState : MonoBehaviour
                 var isDiagonal = Mathf.Abs(dx) == Mathf.Abs(dy);
                 if (!isStraight && !isDiagonal) return false;
                 if (currentBoard.ContainsKey(destinationPosition) && currentBoard[destinationPosition].Team == currentBoard[currentPosition].Team) return false;
-                if (PathIsBlocked(currentPosition, destinationPosition, currentBoard)) return false;
-                return true;
+                return !PathIsBlocked(currentPosition, destinationPosition, currentBoard);
             }
-
             // KNIGHT
             case Identity.Knight:
             {
+                if (currentBoard.ContainsKey(destinationPosition) && currentBoard[destinationPosition].Team == currentBoard[currentPosition].Team) return false;
                 return (Mathf.Abs(dx) == 2 && Mathf.Abs(dy) == 1) || (Mathf.Abs(dx) == 1 && Mathf.Abs(dy) == 2);
             }
-
             // KING
             case Identity.King:
             {
+                if (currentBoard.ContainsKey(destinationPosition) && currentBoard[destinationPosition].Team == currentBoard[currentPosition].Team) return false;
                 return Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) == 1 && !currentBoard.ContainsKey(destinationPosition) ;
             }
-            
             default:
                 return false;
         }
@@ -303,7 +298,6 @@ public class BoardState : MonoBehaviour
             }
             
         }
-
         return false; //we are safe
     }
 

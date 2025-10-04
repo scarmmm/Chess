@@ -22,6 +22,7 @@ public class Pawn : MonoBehaviour
     public GameOver gameOverScreen;
     public UI_Promotion promotionScreen;
     [SerializeField]public BoardState boardState;
+    [SerializeField] public SpawnValidMoveLight spawnValidMoveLight;
     [SerializeField] private GridLocations teamStartingPositions; 
     [SerializeField] private int _playerNumber; // Player number for the pawn
     [SerializeField] public CharacterController controller; // Reference to the CharacterController component
@@ -466,8 +467,7 @@ public class Pawn : MonoBehaviour
             var teamKing = GameManager.Instance.state == GameStates.PlayerTurn1 ? kings : kings2;
             GameObject kingGameObject = teamKing[0];
             Vector3Int kingPosition = GetGridPosition(kingGameObject);
-            
-            
+            spawnValidMoveLight.DestroyGrid();
             //////////////////////////////////////////////////////////////////////////////////////////////////
             if (id.pieceType == ChessPieceType.Player1King || id.pieceType == ChessPieceType.Player2King)
             {
@@ -493,7 +493,18 @@ public class Pawn : MonoBehaviour
                     GameOver(1);
                     return;
                 }
-                selectedPawn = teamKing[0];
+                //if our selected piece can remove the check we are good to continue
+                var identity = boardState.Convert2(selectedPawn.GetComponent<PieceIdentity>().pieceType);
+                var team = selectedPawn.CompareTag("Player1") ? Team.Black : Team.White ;
+                Piece piece = new Piece((Identity)identity,team);
+                if (IsValidPosition(selectedPawn, GetGridPosition(selectedPawn),gridPosition,false))
+                {
+                    currentBoard.Remove(gridPosition);
+                    currentBoard.Add(gridPosition, piece);
+                    currentBoard.Remove(GetGridPosition(selectedPawn));
+                    if (boardState.IsGridUnderAttack(kingPosition, currentBoard)) ;
+                    return;
+                }
             }
             else
             {
@@ -636,17 +647,12 @@ public class Pawn : MonoBehaviour
     private void PlayerTurn(RaycastHit hit, Vector3Int gridPosition, string player)
     {
         PieceIdentity piece = hit.collider.gameObject.GetComponent<PieceIdentity>();
-        GameObject pieceGameObject = hit.collider.gameObject; 
         if (piece == null)
             return;
+        spawnValidMoveLight.DestroyGrid();
         //this is where the actual selection of the piece takes place
         if (selectedPawn == null) // Select piece
         {
-            GameObject kingGameObject = null;
-            var teamKing = GameManager.Instance.state == GameStates.PlayerTurn1 ? kings : kings2;
-            kingGameObject = teamKing[0];
-            Vector3Int kingPosition = GetGridPosition(kingGameObject);
-            
             //we are not in check and our move will not place our king in check
             if (piece != null && piece.pieceType.ToString().Contains(player))
             {
@@ -654,6 +660,17 @@ public class Pawn : MonoBehaviour
                 var id = selectedPawn.GetComponent<PieceIdentity>();
                 string displayName = id != null ? id.pieceType.ToString() : "Unknown";
                 selectedPieceUI.SetPieceName($"Selected: {displayName}");
+                List<Vector3Int> possibleMoves = currentMove.GetCandidates(selectedPawn, GetGridPosition(selectedPawn));
+                List<Vector3Int> validPositions = new List<Vector3Int>();
+                foreach (var move in possibleMoves)
+                {
+                    if (IsValidPosition(selectedPawn, GetGridPosition(selectedPawn), move, false))
+                        validPositions.Add(move);
+                }
+                foreach (var pos in validPositions)
+                {
+                    spawnValidMoveLight.SpawnGrid(pos);
+                }
             }
             
             else 
@@ -679,7 +696,6 @@ public class Pawn : MonoBehaviour
                 var selectedPawnGridPos = GetGridPosition(currentPiece);
                 var pawnComponent = currentPiece.GetComponent<PawnMove>();
                 var isDiagnol = PieceIsDiagnol(currentPiece, destinationPosition);
-                
                 if (isDiagnol)
                 {
                     Vector3Int diff = destinationPosition - selectedPawnGridPos;
@@ -687,7 +703,6 @@ public class Pawn : MonoBehaviour
                     {
                         return true;
                     }
-                    
                     return destinationPosition.x == selectedPawnGridPos.x - 1 && destinationPosition.y == selectedPawnGridPos.y + 1;
                 }
                 if (pawnComponent != null && pawnComponent.isFirstMove)
@@ -1050,9 +1065,20 @@ public class Pawn : MonoBehaviour
         teamId = (selectedPiece.CompareTag("Player1")) ? Team1 : Team2;
         
         // this is to check if the path is valid NOT IF THERE IS A PIECE OCCUPYING THE HIT LOCATION
-        
         switch (pieceIdentity.pieceType)
         {
+            case ChessPieceType.Player1Pawn or ChessPieceType.Player2Pawn:
+            {
+                var directionToMove = selectedPiece.CompareTag("Player1") ? -1 : 1;
+                currentPiecePosition.x += directionToMove;
+                Debug.Log(currentPiecePosition);
+                foreach (var piece in allPieces)
+                {
+                    if (GetGridPosition(piece) == currentPiecePosition && piece.activeInHierarchy)
+                        return true;
+                }
+                break;
+            }
             case ChessPieceType.Player1Rook or ChessPieceType.Player2Rook:
             {
                 if (hit.y == currentPiecePosition.y) // determine whether we are moving vertically or horizontally 
@@ -1137,7 +1163,6 @@ public class Pawn : MonoBehaviour
                         }
                     }
                 }
-
                 break;
             }
             case ChessPieceType.Player1Queen or ChessPieceType.Player2Queen:
@@ -1410,8 +1435,8 @@ public class Pawn : MonoBehaviour
                 //Debug.Log("GridPosition" +index + " : " + gridPos);
                 if (v == gridPos && t.activeInHierarchy)
                 {
-                    Debug.Log("This is the blocking piece: " + t);
-                    Debug.Log("This is its grid location: " + GetGridPosition(t));
+                    //Debug.Log("This is the blocking piece: " + t);
+                    //Debug.Log("This is its grid location: " + GetGridPosition(t));
                     return true;
                 }
             }
