@@ -14,9 +14,9 @@ A complete Unity chess game
 - Go to releases and download the builds.zip
 - Unzip and run the .exe
 
-## Screenshots
+## Screenshots	
 <p align="center">
   <img src="Screenshots/Screenshot4.png" width="400" height = "600"/>
-  <img src="Screenshots/Screenshot3.png" width="420" height = "600"/>
+  <img src="Screenshots/Screenshot5.png" width="400" height = "600"/>
   <img src="Screenshots/GameOver.png" width="400"/>
 </p>
