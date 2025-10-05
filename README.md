@@ -16,7 +16,7 @@ A complete Unity chess game
 
 ## Screenshots	
 <p align="center">
-  <img src="Screenshots/Screenshot4.png" width="400" height = "600"/>
-  <img src="Screenshots/Screenshot5.png" width="400" height = "600"/>
+  <img src="Screenshots/Screenshot7.png" width="400" height = "600"/>
+  <img src="Screenshots/Screenshot8.png" width="400" height = "600"/>
   <img src="Screenshots/GameOver.png" width="400"/>
 </p>
