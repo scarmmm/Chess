@@ -6,23 +6,14 @@ public class Targeter : MonoBehaviour
 {
     public Renderer renderer;
     private Material originalMaterial;
-    private static Material unlitGreenMaterial;
+    public Material highlightMaterial;
 
     void Start()
     {
         renderer = GetComponent<Renderer>();
-
-        // Cache the material reference itself, not an instance clone
         if (renderer != null)
         {
             originalMaterial = renderer.sharedMaterial;
-        }
-
-        // Create a shared unlit green material
-        if (unlitGreenMaterial == null)
-        {
-            unlitGreenMaterial = new Material(Shader.Find("Unlit/Color"));
-            unlitGreenMaterial.color = Color.green * .5f;
         }
     }
 
@@ -30,10 +21,10 @@ public class Targeter : MonoBehaviour
     {
         if (!enabled) return;
 
-        if (renderer != null)
+        if (renderer != null && highlightMaterial != null)
         {
             // Replace the material entirely
-            renderer.material = unlitGreenMaterial;
+            renderer.material = highlightMaterial;
         }
     }
 

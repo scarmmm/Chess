@@ -325,7 +325,7 @@ public class BoardState : MonoBehaviour
         return false; 
     }
 
-    private bool CheckMate(Dictionary<Vector3Int, Piece> currentBoard, bool isMaximizer)
+    public bool CheckMate(Dictionary<Vector3Int, Piece> currentBoard, bool isMaximizer)
     {
         var kingPosition = GetKingPosition(currentBoard,isMaximizer);
         if (!IsGridUnderAttack(kingPosition, currentBoard))
@@ -337,11 +337,8 @@ public class BoardState : MonoBehaviour
 
     public bool WillPieceRemoveCheck(Vector3Int kingPosition, Dictionary<Vector3Int, Piece> currentBoard, bool isMaximizer)
     { 
-        //here is a list of all possible moves
         var allMoves = GetAllPossibleMoveForTeam(currentBoard, isMaximizer);
-        //Check to see if a friendly piece
-        //can reach the candidate and if
-        //it saves the king
+        var value = kingPosition;
         if (isMaximizer)
         {
             foreach (var keyValue in currentBoard)
@@ -357,12 +354,17 @@ public class BoardState : MonoBehaviour
                         // Apply the move on the copy
                         newBoard[move] = newBoard[keyValue.Key];  // move piece to new square
                         newBoard.Remove(keyValue.Key);
+                        if (keyValue.Value.Type == Identity.King)
+                        {
+                            kingPosition = move;
+                            Debug.Log($"Position changed to ->{move}");
+                        }
                         if (!IsGridUnderAttack(kingPosition, newBoard))
                         {
                             Debug.Log($"This is the piece {keyValue.Value.Type} / {keyValue.Value.Team} that can reach it, with the following move -> {move}");
                             return true;
                         }
-
+                        kingPosition = value;
                     }
                 }
             }
@@ -382,28 +384,53 @@ public class BoardState : MonoBehaviour
                         // Apply the move on the copy
                         newBoard[move] = newBoard[keyValue.Key];  // move piece to new square
                         newBoard.Remove(keyValue.Key);
+                        if (keyValue.Value.Type == Identity.King)
+                        {
+                            kingPosition = move;
+                            Debug.Log($"Position changed 2 ->{move}");
+                        }
                         if (!IsGridUnderAttack(kingPosition, newBoard))
                         {
                             Debug.Log($"Location -> {keyValue.Key}");
                             Debug.Log($"This is the piece {keyValue.Value.Type} / {keyValue.Value.Team} that can reach it, with the following move -> {move}");
                             return true;
                         }
-
+                        kingPosition = value;
                     }
                 }
             }
         }
         return false; 
     }
-    
-    private List<Vector3Int> GetAllPossibleMoveForTeam(Dictionary<Vector3Int, Piece> currentBoard, bool isMaximizer)
+
+    public bool CanKingLeaveCheck(GameObject king, Vector3Int kingPosition, Dictionary<Vector3Int, Piece> currentBoard,bool isMaximizer)
+    {
+        var allValidKingMoves = _allValidMoves.GetCandidates(king,kingPosition);
+        var team = isMaximizer ? Team.White : Team.Black;
+        Piece piece = new Piece(Identity.King, team);
+        foreach (var move in allValidKingMoves)
+        {
+            if (!CanKingReachSquare(kingPosition, move, currentBoard))
+                continue;
+            var newBoard = new Dictionary<Vector3Int, Piece>(currentBoard);
+            newBoard.Remove(kingPosition);
+            newBoard.Add(move,piece);
+            if (!IsGridUnderAttack(kingPosition, newBoard))
+                return true;
+        } 
+
+        
+        return false;
+    }
+
+    public List<Vector3Int> GetAllPossibleMoveForTeam(Dictionary<Vector3Int, Piece> currentBoard, bool isMaximizer)
     {
         var possibleMoves = new List<Vector3Int>();
         if (isMaximizer)
         {
             foreach (var piece in currentBoard)
             {
-                if(piece.Value.Team == Team.Black)
+                if(piece.Value.Team == Team.White)
                     possibleMoves.AddRange(_allValidMoves.GetCandidates(piece.Value, piece.Key,true));
             }
         }
@@ -411,7 +438,7 @@ public class BoardState : MonoBehaviour
         {
             foreach (var piece in currentBoard)
             {
-                if(piece.Value.Team == Team.White)
+                if(piece.Value.Team == Team.Black)
                     possibleMoves.AddRange(_allValidMoves.GetCandidates(piece.Value, piece.Key,true));
             }
         }

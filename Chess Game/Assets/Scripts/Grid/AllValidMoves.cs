@@ -179,15 +179,6 @@ public class AllValidMoves : MonoBehaviour
             }
         }
     }
-    private bool IsOutOfBounds(Vector3Int destination)
-    {
-        if (destination.x is < -6 or > 1)
-            return true;
-        if(destination.y is >7 or <0)
-            return true;
-        return false; 
-    }
-    
     private void OutOfBounds(List<Vector3Int> list, int x, int y)
     {
         if (x >= minX && x <= maxX && y >= minY && y <= maxY)

@@ -1435,6 +1435,7 @@ MonoBehaviour:
   hasCastled: 0
   weAreInCheck: 0
   selectedPieceUI: {fileID: 286256957}
+  greenHighlightMat: {fileID: 2100000, guid: 9fffb50dd9fd2ac4d92229f37d696278, type: 2}
 --- !u!4 &184958027 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7095600763579194059, guid: c4cbf7a638d1375488e98de5795ffa1f,

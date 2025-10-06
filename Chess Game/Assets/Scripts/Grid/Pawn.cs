@@ -65,6 +65,7 @@ public class Pawn : MonoBehaviour
     //below needs to become a component
    [SerializeField] private bool weAreInCheck = false; 
    [SerializeField] private UI_SelectedPiece selectedPieceUI;
+   [SerializeField] private Material greenHighlightMat;
     // Start is called before the first frame update
     private void Start()
     {
@@ -87,6 +88,7 @@ public class Pawn : MonoBehaviour
             pawnInstance.AddComponent<Overlap>();
             Targeter targeter = pawnInstance.AddComponent<Targeter>();
             targeter.renderer = pawnInstance.GetComponent<Renderer>();
+            targeter.highlightMaterial =  greenHighlightMat;
             PieceIdentity id = pawnInstance.AddComponent<PieceIdentity>();
             PawnMove pawnComponent = pawnInstance.AddComponent<PawnMove>();
             id.pieceType = ChessPieceType.Player1Pawn;
@@ -111,6 +113,7 @@ public class Pawn : MonoBehaviour
             boxCollider.isTrigger = true;
             Targeter targeter = rookInstance.AddComponent<Targeter>();
             targeter.renderer = rookInstance.GetComponent<Renderer>();
+            targeter.highlightMaterial =  greenHighlightMat;
             Rigidbody rigidbody = rookInstance.AddComponent<Rigidbody>();
             rigidbody.useGravity = false;
             rookInstance.AddComponent<Overlap>();
@@ -139,6 +142,7 @@ public class Pawn : MonoBehaviour
             boxCollider.isTrigger = true;
             Targeter targeter = bishopInstance.AddComponent<Targeter>();
             targeter.renderer = bishopInstance.GetComponent<Renderer>();
+            targeter.highlightMaterial =  greenHighlightMat;
             bishopInstance.transform.localScale = new Vector3(15f, 15f, 15f);
             boxCollider.size = new Vector3(.04f, .04f, .04f);
             Rigidbody rigidbody = bishopInstance.AddComponent<Rigidbody>();
@@ -166,6 +170,7 @@ public class Pawn : MonoBehaviour
             boxCollider.isTrigger = true;
             Targeter targeter = knightInstance.AddComponent<Targeter>();
             targeter.renderer = knightInstance.GetComponent<Renderer>();
+            targeter.highlightMaterial =  greenHighlightMat;
             knightInstance.transform.localScale = new Vector3(15f, 15f, 15f);
             boxCollider.size = new Vector3(.04f, .04f, .04f);
             PieceIdentity id = knightInstance.AddComponent<PieceIdentity>();
@@ -193,6 +198,7 @@ public class Pawn : MonoBehaviour
             boxCollider.isTrigger = true;
             Targeter targeter = queenInstance.AddComponent<Targeter>();
             targeter.renderer = queenInstance.GetComponent<Renderer>();
+            targeter.highlightMaterial =  greenHighlightMat;
             queenInstance.transform.localScale = new Vector3(15f, 15f, 15f);
             boxCollider.size = new Vector3(.04f, .04f, .04f);
             PieceIdentity id = queenInstance.AddComponent<PieceIdentity>();
@@ -220,6 +226,7 @@ public class Pawn : MonoBehaviour
             boxCollider.isTrigger = true;
             Targeter targeter = kingInstance.AddComponent<Targeter>();
             targeter.renderer = kingInstance.GetComponent<Renderer>();
+            targeter.highlightMaterial =  greenHighlightMat;
             kingInstance.AddComponent<Overlap>();
             kingInstance.transform.localScale = new Vector3(15f, 15f, 15f);
             boxCollider.size = new Vector3(.04f, .04f, .04f);
@@ -255,6 +262,7 @@ public class Pawn : MonoBehaviour
             boxCollider.size = new Vector3(.04f, .04f, .04f);
             Targeter targeter = pawnInstance.AddComponent<Targeter>();
             targeter.renderer = pawnInstance.GetComponent<Renderer>();
+            targeter.highlightMaterial =  greenHighlightMat;
             PieceIdentity id = pawnInstance.AddComponent<PieceIdentity>();
             PawnMove pawnComponent = pawnInstance.AddComponent<PawnMove>();
             Rigidbody rigidbody = pawnInstance.AddComponent<Rigidbody>();
@@ -281,6 +289,7 @@ public class Pawn : MonoBehaviour
             boxCollider.isTrigger = true;
             Targeter targeter = rookInstance.AddComponent<Targeter>();
             targeter.renderer = rookInstance.GetComponent<Renderer>();
+            targeter.highlightMaterial =  greenHighlightMat;
             rookInstance.transform.localScale = new Vector3(15f, 15f, 15f);
             boxCollider.size = new Vector3(.06f, .06f, .06f);
             PieceIdentity id = rookInstance.AddComponent<PieceIdentity>();
@@ -310,6 +319,7 @@ public class Pawn : MonoBehaviour
             Targeter targeter = bishopInstance.AddComponent<Targeter>();
             bishopInstance.AddComponent<Overlap>();
             targeter.renderer = bishopInstance.GetComponent<Renderer>();
+            targeter.highlightMaterial =  greenHighlightMat;
             bishopInstance.transform.localScale = new Vector3(15f, 15f, 15f);
             boxCollider.size = new Vector3(.04f, .04f, .04f);
             PieceIdentity id = bishopInstance.AddComponent<PieceIdentity>();
@@ -337,6 +347,7 @@ public class Pawn : MonoBehaviour
             knightInstance.GetComponent<Renderer>().material = team2;
             Targeter targeter = knightInstance.AddComponent<Targeter>();
             targeter.renderer = knightInstance.GetComponent<Renderer>();
+            targeter.highlightMaterial =  greenHighlightMat;
             knightInstance.AddComponent<Overlap>();
             knightInstance.transform.localScale = new Vector3(15f, 15f, 15f);
             boxCollider.size = new Vector3(.06f, .06f, .06f);
@@ -364,6 +375,7 @@ public class Pawn : MonoBehaviour
             queenInstance.GetComponent<Renderer>().material = team2;
             Targeter targeter = queenInstance.AddComponent<Targeter>();
             targeter.renderer = queenInstance.GetComponent<Renderer>();
+            targeter.highlightMaterial =  greenHighlightMat;
             queenInstance.AddComponent<Overlap>();
             queenInstance.transform.localScale = new Vector3(15f, 15f, 15f);
             boxCollider.size = new Vector3(.04f, .04f, .04f);
@@ -391,6 +403,7 @@ public class Pawn : MonoBehaviour
             kingInstance.GetComponent<Renderer>().material = team2;
             Targeter targeter = kingInstance.AddComponent<Targeter>();
             targeter.renderer = kingInstance.GetComponent<Renderer>();
+            targeter.highlightMaterial = greenHighlightMat;
             kingInstance.AddComponent<Overlap>();
             kingInstance.transform.localScale = new Vector3(15f, 15f, 15f);
             boxCollider.size = new Vector3(.06f, .06f, .06f);
@@ -487,7 +500,7 @@ public class Pawn : MonoBehaviour
                 var currentBoard = ConvertGameObjectsToDictionary();
                 //if no piece can get us out of check its game over
                 var isMaximizer = Instance.state == GameStates.PlayerTurn1 ? false : true;
-                if (!boardState.WillPieceRemoveCheck(kingPosition, currentBoard, isMaximizer))
+                if (boardState.CheckMate(currentBoard, isMaximizer))
                 {
                     Debug.Log(1);
                     GameOver(1);
@@ -502,8 +515,8 @@ public class Pawn : MonoBehaviour
                     currentBoard.Remove(gridPosition);
                     currentBoard.Add(gridPosition, piece);
                     currentBoard.Remove(GetGridPosition(selectedPawn));
-                    if (boardState.IsGridUnderAttack(kingPosition, currentBoard)) ;
-                    return;
+                    if (boardState.IsGridUnderAttack(kingPosition, currentBoard))
+                        return;
                 }
             }
             else
@@ -1071,7 +1084,7 @@ public class Pawn : MonoBehaviour
             {
                 var directionToMove = selectedPiece.CompareTag("Player1") ? -1 : 1;
                 currentPiecePosition.x += directionToMove;
-                Debug.Log(currentPiecePosition);
+                //Debug.Log(currentPiecePosition);
                 foreach (var piece in allPieces)
                 {
                     if (GetGridPosition(piece) == currentPiecePosition && piece.activeInHierarchy)
